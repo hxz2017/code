@@ -94,6 +94,7 @@ module.exports = class BuyGemsModal extends ModalView
   onStripeReceivedToken: (e) ->
     data = {
       productID: @productBeingPurchased.get('name')
+      description: $.t(@productBeingPurchased.get('i18n'))
       stripe: {
         token: e.token.id
         timestamp: @timestampForPurchase
