@@ -99,8 +99,8 @@ module.exports = class CocoRouter extends Backbone.Router
     'editor/poll': go('editor/poll/PollSearchView')
     'editor/poll/:articleID': go('editor/poll/PollEditView')
     'editor/thang-tasks': go('editor/ThangTasksView')
-    'editor/verifier': go('editor/verifier/VerifierView')
-    'editor/verifier/:levelID': go('editor/verifier/VerifierView')
+    'editor/verifier': go('editor/verifier/VerifierView', { adminOnly: true })
+    'editor/verifier/:levelID': go('editor/verifier/VerifierView', { adminOnly: true })
 
     'file/*path': 'routeToServer'
 
@@ -176,6 +176,8 @@ module.exports = class CocoRouter extends Backbone.Router
       return @routeDirectly('teachers/RestrictedToTeachersView')
     if options.studentsOnly and not (me.isStudent() or me.isAdmin())
       return @routeDirectly('courses/RestrictedToStudentsView')
+    if options.adminOnly and not me.isAdmin()
+      return @routeDirectly('NotFoundView')
     leavingMessage = _.result(window.currentView, 'onLeaveMessage')
     if leavingMessage
       if not confirm(leavingMessage)
