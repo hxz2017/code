@@ -77,6 +77,8 @@ module.exports = class LevelSetupManager extends CocoClass
     if @level.isType('course', 'course-ladder', 'game-dev', 'web-dev') or window.serverConfig.picoCTF
       @onInventoryModalPlayClicked()
       return
+    # Hero is fixed as DanTDM
+    return
     @heroesModal = new PlayHeroesModal({supermodel: @supermodel, session: @session, confirmButtonI18N: 'play.next', level: @level, hadEverChosenHero: @options.hadEverChosenHero})
     @inventoryModal = new InventoryModal({supermodel: @supermodel, session: @session, level: @level})
     @heroesModalDestroy = @heroesModal.destroy
