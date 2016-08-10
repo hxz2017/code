@@ -299,13 +299,14 @@ class ModelResource extends Resource
 
   load: ->
     # TODO: Track progress on requests and don't retry if progress was made recently.
-    # Probably use _.debounce and attach event listeners to xhr objects. 
+    # Probably use _.debounce and attach event listeners to xhr objects.
     
     # This logic is for handling failed responses for level loading.
     timeToWait = 5000
     tryLoad = =>
       return if this.isLoaded
-      if @loadsAttempted > 4
+      if @loadsAttempted > 0 # TODO: replace with 4
+        console.log "[remove] Didn't load model in #{timeToWait}ms (attempt ##{@loadsAttempted}), maybe trying again: ", _.result(@model, 'url')
         @markFailed()
         return @
       @markLoading()

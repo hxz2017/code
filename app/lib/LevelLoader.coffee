@@ -417,6 +417,7 @@ module.exports = class LevelLoader extends CocoClass
     @supermodel.loadModel(model, resourceName)
 
   onSupermodelLoaded: ->
+    location.reload() unless @supermodel.failed
     clearTimeout @loadTimeoutID
     return if @destroyed
     console.log 'SuperModel for Level loaded in', new Date().getTime() - @t0, 'ms' if LOG
