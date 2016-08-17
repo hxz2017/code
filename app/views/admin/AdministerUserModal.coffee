@@ -5,6 +5,8 @@ Prepaid = require 'models/Prepaid'
 StripeCoupons = require 'collections/StripeCoupons'
 forms = require 'core/forms'
 Prepaids = require 'collections/Prepaids'
+LevelSessions = require 'collections/LevelSessions'
+Classrooms = require 'collections/Classrooms'
 
 module.exports = class AdministerUserModal extends ModalView
   id: 'administer-user-modal'
@@ -23,8 +25,23 @@ module.exports = class AdministerUserModal extends ModalView
     @supermodel.trackRequest @coupons.fetch({cache: false})
     @prepaids = new Prepaids()
     @supermodel.trackRequest @prepaids.fetchByCreator(@userHandle)
+    @classrooms = new Classrooms()
+    @supermodel.trackRequest(@classrooms.fetch({data:{ownerID: @user.id}})).then =>
+      @classrooms.each (classroom) =>
+        classroom.levelSessions = new LevelSessions()
+        @supermodel.trackRequests classroom.levelSessions.fetchForAllClassroomMembers(classroom)
     
   onLoaded: ->
+    @allLevelSessions = new LevelSessions(_.reduce((@classrooms.map (c) -> c.levelSessions.models), (a,b) -> (a.concat(b))))
+    console.log @allLevelSessions
+    mostRecentSession = @allLevelSessions.max (session) ->
+      new Date(session.get('changed'))
+    console.log new Date(mostRecentSession.get('changed'))
+    console.log @allLevelSessions.filter (session) ->
+      changed = new Date(session.get('changed'))
+      if changed > new Date(mostRecentSession.get('changed'))
+        console.log changed
+      changed > new Date(mostRecentSession.get('changed'))
     # TODO: Figure out a better way to expose this info, perhaps User methods?
     stripe = @user.get('stripe') or {}
     @free = stripe.free is true
