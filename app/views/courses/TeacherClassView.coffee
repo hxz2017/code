@@ -320,6 +320,7 @@ module.exports = class TeacherClassView extends RootView
   onClickExportStudentProgress: ->
     # TODO: Does not yield .csv download on Safari, and instead opens a new tab with the .csv contents
     window.tracker?.trackEvent 'Teachers Class Export CSV', category: 'Teachers', classroomID: @classroom.id, ['Mixpanel']
+    startDate = new Date(@$('#export-data-start-date').val())
     courseLabels = ""
     courseOrder = []
     courses = (@courses.get(c._id) for c in @classroom.get('courses'))
@@ -327,7 +328,11 @@ module.exports = class TeacherClassView extends RootView
     for course, index in courses
       courseLabels += "#{courseLabelsArray[index]} Playtime,"
       courseOrder.push(course.id)
-    csvContent = "data:text/csv;charset=utf-8,Username,Email,Total Playtime,#{courseLabels}Concepts\n"
+    if isNaN(startDate.getTime())
+      startDateString = "the beginning of time"
+    else
+      startDateString = moment(startDate).toISOString().replace(/T[0:\.]+Z/, '')
+    csvContent = "data:text/csv;charset=utf-8,Data since #{startDateString}\nUsername,Email,Total Playtime,#{courseLabels}Concepts\n"
     levelCourseMap = {}
     language = @classroom.get('aceConfig')?.language
     for trimCourse in @classroom.get('courses')
@@ -349,6 +354,7 @@ module.exports = class TeacherClassView extends RootView
       coursePlaytimeMap = {}
       playtime = 0
       for session in @classroom.sessions.models when session.get('creator') is student.id
+        continue if startDate and new Date(session.get('changed')) < startDate
         playtime += session.get('playtime') or 0
         if courseID = levelCourseMap[session.get('level')?.original]?.id
           coursePlaytimeMap[courseID] ?= 0
