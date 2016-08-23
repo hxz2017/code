@@ -1,5 +1,11 @@
 // TODO: don't serve this script from codecombat.com; serve it from a harmless extra domain we don't have yet.
 
+var lastSource = null;
+var lastOrigin = null;
+window.onerror = function(message, url, line, column, error){
+  console.log("Got an error!", arguments);
+  lastSource.postMessage({ type: 'error', message:message, url:url, line:line, column:column, error:error.toString() }, lastOrigin);
+}
 window.addEventListener('message', receiveMessage, false);
 
 var concreteDom;
@@ -21,7 +27,7 @@ var allowedOrigins = [
 ];
 
 function receiveMessage(event) {
-    var origin = event.origin || event.originalEvent.origin; // For Chrome, the origin property is in the event.originalEvent object.
+    var origin = lastOrigin = event.origin || event.originalEvent.origin; // For Chrome, the origin property is in the event.originalEvent object.
     var allowed = false;
     allowedOrigins.forEach(function(pattern) {
         allowed = allowed || pattern.test(origin);
@@ -31,7 +37,7 @@ function receiveMessage(event) {
         return;
     }
     var data = event.data;
-    var source = event.source;
+    var source = lastSource = event.source;
     switch (data.type) {
     case 'create':
         create(_.pick(data, 'dom', 'styles', 'scripts'));
@@ -79,12 +85,8 @@ function replaceNodes(selector, newNodes){
     $newNodes.attr('for', firstNode.attr('for'));
     
     newFirstNode = $newNodes[0];
-    try {
-      firstNode.replaceWith(newFirstNode); // Removes newFirstNode from its array (!!)
-    } catch (e) {
-      console.log('Failed to update some nodes:', e);
-    }
-    
+    firstNode.replaceWith(newFirstNode); // Removes newFirstNode from its array (!!)
+
     $(newFirstNode).after($newNodes);
 }
 
