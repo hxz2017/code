@@ -89,17 +89,13 @@ module.exports = class SpellView extends CocoView
     @ace = ace.edit @$el.find('.ace')[0]
     @aceSession = @ace.getSession()
     # Override setAnnotations so the Ace html worker doesn't clobber our annotations
-    reallySetAnnotations = @aceSession.setAnnotations
-    @aceSession.setAnnotations = (unfilteredNewAnnotations, calledByUs) =>
-      if calledByUs
-        reallySetAnnotations.call(@aceSession, unfilteredNewAnnotations)
-      else
-        unfilteredPreviousAnnotations = @aceSession.getAnnotations()
-        # Keep around any previous annotations we generated; we'll clear those ourselves
-        filteredPreviousAnnotations = _.filter unfilteredPreviousAnnotations, (a) -> a.createdBy in ['aether', 'web-dev-iframe']
-        filteredNewAnnotations = _.reject unfilteredNewAnnotations, (annotation) ->
+    @reallySetAnnotations = @aceSession.setAnnotations.bind(@aceSession)
+    @aceSession.setAnnotations = (annotations) =>
+      previousAnnotations = @aceSession.getAnnotations()
+      newAnnotations = _.filter previousAnnotations, (annotation) -> annotation.createdBy? # Keep the ones we generated
+        .concat _.reject annotations, (annotation) -> # Ignore this particular info-annotation the html worker generates
           annotation.text is 'Start tag seen without seeing a doctype first. Expected e.g. <!DOCTYPE html>.'
-        reallySetAnnotations.call(@aceSession, filteredNewAnnotations.concat(filteredPreviousAnnotations))
+      @reallySetAnnotations newAnnotations
     @aceDoc = @aceSession.getDocument()
     @aceSession.setUseWorker @spell.language in @languagesThatUseWorkers
     @aceSession.setMode utils.aceEditModes[@spell.language]
@@ -811,7 +807,7 @@ module.exports = class SpellView extends CocoView
 
   clearWebDevErrors: ->
     nonWebDevAnnotations = _.reject @aceSession.getAnnotations(), (annotation) -> annotation.createdBy is 'web-dev-iframe'
-    @aceSession.setAnnotations nonWebDevAnnotations, true
+    @reallySetAnnotations nonWebDevAnnotations
 
     problemsToClear = _.filter @problems, (p) -> p.createdBy is 'web-dev-iframe'
     problemsToClear.forEach (problem) -> problem.destroy()
@@ -822,7 +818,7 @@ module.exports = class SpellView extends CocoView
     problem.destroy() for problem in @problems
     @problems = []
     nonAetherAnnotations = _.reject @aceSession.getAnnotations(), (annotation) -> annotation.createdBy is 'aether'
-    @aceSession.setAnnotations nonAetherAnnotations, true
+    @reallySetAnnotations nonAetherAnnotations
     @highlightCurrentLine {}  # This'll remove all highlights
 
   displayAether: (aether, isCast=false) ->
@@ -845,7 +841,7 @@ module.exports = class SpellView extends CocoView
         Backbone.Mediator.publish 'tome:show-problem-alert', problem: problem, lineOffsetPx: Math.max lineOffsetPx, 0
       @saveUserCodeProblem(aether, aetherProblem) if isCast
       annotations.push problem.annotation if problem.annotation
-    @aceSession.setAnnotations annotations, true
+    @reallySetAnnotations annotations
     @highlightCurrentLine aether.flow unless _.isEmpty aether.flow
     #console.log '  and we could do the metrics', aether.metrics unless _.isEmpty aether.metrics
     #console.log '  and we could do the style', aether.style unless _.isEmpty aether.style
@@ -1015,7 +1011,7 @@ module.exports = class SpellView extends CocoView
 
     # @saveUserCodeProblem(aether, aetherProblem) # TODO: Enable saving of web-dev user code problems
     annotations.push problem.annotation if problem.annotation
-    @aceSession.setAnnotations annotations, true
+    @reallySetAnnotations annotations
     Backbone.Mediator.publish 'tome:problems-updated', spell: @spell, problems: @problems, isCast: true
 
     # TODO: Unset this on rerun
