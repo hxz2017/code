@@ -13,7 +13,7 @@ module.exports = class Problem
       @annotation = @buildAnnotationFromAetherProblem(@aetherProblem)
       { @lineMarkerRange, @textMarkerRange } = @buildMarkerRangesFromAetherProblem(@aetherProblem) if isCast
 
-      { @level, @range, @message, @hint, @userInfo } = @aetherProblem
+      { @level, @range, @message, @hint, @userInfo, @type } = @aetherProblem
       { @row, @column: col } = @aetherProblem.range?[0]
       @createdBy = 'aether'
     else

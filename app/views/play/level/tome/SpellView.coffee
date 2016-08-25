@@ -853,34 +853,37 @@ module.exports = class SpellView extends CocoView
     Backbone.Mediator.publish 'tome:problems-updated', spell: @spell, problems: @problems, isCast: isCast
     @ace.resize()
 
-  saveUserCodeProblem: (aether, aetherProblem) ->
+  saveUserCodeProblem: (aether, problem) ->
+    aether ?= @spellThang?.aether
     # Skip duplicate problems
-    hashValue = aether.raw + aetherProblem.message
+    hashValue = aether.raw + problem.message
     return if hashValue of @savedProblems
     @savedProblems[hashValue] = true
-    return unless Math.random() < 0.01  # Let's only save a tiny fraction of these during HoC to reduce writes.
+    return unless Math.random() < 0.01  # Let's only save a tiny fraction of these to reduce writes.
 
     # Save new problem
     @userCodeProblem = new UserCodeProblem()
     @userCodeProblem.set 'code', aether.raw
-    if aetherProblem.range
+    if problem.range or problem.row
       rawLines = aether.raw.split '\n'
-      errorLines = rawLines.slice aetherProblem.range[0].row, aetherProblem.range[1].row + 1
+      startLine = problem.range?[0].row or problem.row
+      endLine = (problem.range?[1].row or problem.row)
+      errorLines = rawLines.slice startLine, endLine + 1
       @userCodeProblem.set 'codeSnippet', errorLines.join '\n'
-    @userCodeProblem.set 'errHint', aetherProblem.hint if aetherProblem.hint
-    @userCodeProblem.set 'errId', aetherProblem.id if aetherProblem.id
-    @userCodeProblem.set 'errLevel', aetherProblem.level if aetherProblem.level
-    if aetherProblem.message
-      @userCodeProblem.set 'errMessage', aetherProblem.message
+    @userCodeProblem.set 'errHint', problem.hint if problem.hint
+    @userCodeProblem.set 'errId', problem.id if problem.id
+    @userCodeProblem.set 'errLevel', problem.level if problem.level
+    if problem.message
+      @userCodeProblem.set 'errMessage', problem.message
       # Save error message without 'Line N: ' prefix
-      messageNoLineInfo = aetherProblem.message
+      messageNoLineInfo = problem.message
       if lineInfoMatch = messageNoLineInfo.match /^Line [0-9]+\: /
         messageNoLineInfo = messageNoLineInfo.slice(lineInfoMatch[0].length)
       @userCodeProblem.set 'errMessageNoLineInfo', messageNoLineInfo
-    @userCodeProblem.set 'errRange', aetherProblem.range if aetherProblem.range
-    @userCodeProblem.set 'errType', aetherProblem.type if aetherProblem.type
+    @userCodeProblem.set 'errRange', problem.range if problem.range
+    @userCodeProblem.set 'errType', problem.type if problem.type
     @userCodeProblem.set 'language', aether.language.id if aether.language?.id
-    @userCodeProblem.set 'levelID', @options.levelID if @options.levelID
+    @userCodeProblem.set 'levelID', problem.levelID if problem.levelID
     @userCodeProblem.save()
     null
 
@@ -1010,7 +1013,9 @@ module.exports = class SpellView extends CocoView
     lineOffsetPx -= @ace.session.getScrollTop()
     Backbone.Mediator.publish 'tome:show-problem-alert', problem: problem, lineOffsetPx: Math.max lineOffsetPx, 0
 
-    # @saveUserCodeProblem(aether, aetherProblem) # TODO: Enable saving of web-dev user code problems
+    if aether = @spellThang?.aether
+      @saveUserCodeProblem(aether, problem) # TODO: Enable saving of web-dev user code problems
+
     annotations.push problem.annotation if problem.annotation
     @reallySetAnnotations annotations
     Backbone.Mediator.publish 'tome:problems-updated', spell: @spell, problems: @problems, isCast: true
