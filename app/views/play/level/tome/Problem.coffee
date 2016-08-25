@@ -2,6 +2,7 @@ Range = ace.require('ace/range').Range
 
 # This class can either wrap an AetherProblem,
 # or act as a general runtime error container for web-dev iFrame errors.
+# TODO: Use subclasses? Might need a factory pattern for that (bleh)
 module.exports = class Problem
   annotation: null
   markerRange: null
@@ -17,7 +18,7 @@ module.exports = class Problem
       @createdBy = 'aether'
     else
       @annotation = @buildAnnotationFromWebDevError(error)
-      { @lineMarkerRange, @textMarkerRange } = @buildMarkerRangeFromWebDevError(error)
+      { @lineMarkerRange, @textMarkerRange } = @buildMarkerRangesFromWebDevError(error)
 
       @level = error.type or 'error'
       @row = error.line
@@ -64,7 +65,7 @@ module.exports = class Problem
       createdBy: 'aether'
     }
 
-  buildMarkerRangeFromWebDevError: (error) ->
+  buildMarkerRangesFromWebDevError: (error) ->
     lineMarkerRange = new Range error.line, 0, error.line, 1
     lineMarkerRange.start = @ace.getSession().getDocument().createAnchor lineMarkerRange.start
     lineMarkerRange.end = @ace.getSession().getDocument().createAnchor lineMarkerRange.end
