@@ -7,39 +7,39 @@ module.exports = class Problem
   markerRange: null
   # TODO: Convert calls to constructor to use object
   constructor: ({ @aether, @aetherProblem, @ace, isCast=false, @levelID, error }) ->
-    debugger if arguments.length > 1
     if @aetherProblem
       @annotation = @buildAnnotationFromAetherProblem(@aetherProblem)
-      {@lineMarkerRange, @textMarkerRange} = @buildMarkerRangesFromAetherProblem(@aetherProblem) if isCast
-      
-      @level = @aetherProblem.level
-      @row = @aetherProblem.range?[0]?.row
-      @column = @aetherProblem.range?[0]?.col
-      @range = @aetherProblem.range
-      @message = @aetherProblem.message
-      @hint = @aetherProblem.hint
-      @userInfo = @aetherProblem.userInfo
+      { @lineMarkerRange, @textMarkerRange } = @buildMarkerRangesFromAetherProblem(@aetherProblem) if isCast
+
+      {@level, @range, @message, @hint, @userInfo} = @aetherProblem
+      {@row, @column: col} = @aetherProblem.range?[0]
+      @createdBy = 'aether'
     else
       @annotation = @buildAnnotationFromWebDevError(error)
-      @lineMarkerRange = new Range error.line, 0, error.line, 1
-      @lineMarkerRange.start = @ace.getSession().getDocument().createAnchor @lineMarkerRange.start
-      @lineMarkerRange.end = @ace.getSession().getDocument().createAnchor @lineMarkerRange.end
-      @lineMarkerRange.id = @ace.getSession().addMarker @lineMarkerRange, 'problem-line', 'fullLine'
+      { @lineMarkerRange, @textMarkerRange } = @buildMarkerRangeFromWebDevError(error)
 
-      @level = error?.type or 'error'
-      @row = error?.line
-      @column = error?.column
-      @message = error.text or error.raw or 'Unknown Error'
-      @hint = undefined
+      @level = error.type or 'error'
+      @row = error.line
+      @column = error.column
+      @message = error.message or error.raw or 'Unknown Error'
+      if error.line
+        @message = "Line #{error.line}: " + @message
+      # @hint = error.raw
       @userInfo = undefined
+      @createdBy = 'web-dev-iframe'
+      # TODO: Include runtime/transpile error types depending on something?
 
     # TODO: get ACE screen line, too, for positioning, since any multiline "lines" will mess up positioning
     Backbone.Mediator.publish("problem:problem-created", line: @annotation.row, text: @annotation.text) if application.isIPadApp
 
+  isEqual: (problem) ->
+    _.all ['row', 'column', 'level', 'column', 'message', 'hint'], (attr) =>
+      @[attr] is problem[attr]
+
   destroy: ->
     @removeMarkerRanges()
     @userCodeProblem.off() if @userCodeProblem
-    
+
   buildAnnotationFromWebDevError: (error) ->
     {
       row: error.line
@@ -62,6 +62,14 @@ module.exports = class Problem
       type: @aetherProblem.level ? 'error'
       createdBy: 'aether'
     }
+
+  buildMarkerRangeFromWebDevError: (error) ->
+    lineMarkerRange = new Range error.line, 0, error.line, 1
+    lineMarkerRange.start = @ace.getSession().getDocument().createAnchor lineMarkerRange.start
+    lineMarkerRange.end = @ace.getSession().getDocument().createAnchor lineMarkerRange.end
+    lineMarkerRange.id = @ace.getSession().addMarker lineMarkerRange, 'problem-line', 'fullLine'
+    textMarkerRange = undefined # We don't get any per-character info from standard errors
+    { lineMarkerRange, textMarkerRange }
 
   buildMarkerRangesFromAetherProblem: (aetherProblem) ->
     return unless aetherProblem.range
