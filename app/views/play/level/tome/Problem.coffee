@@ -5,7 +5,6 @@ Range = ace.require('ace/range').Range
 module.exports = class Problem
   annotation: null
   markerRange: null
-  # TODO: Convert calls to constructor to use object
   constructor: ({ @aether, @aetherProblem, @ace, isCast=false, @levelID, error }) ->
     if @aetherProblem
       @annotation = @buildAnnotationFromAetherProblem(@aetherProblem)
