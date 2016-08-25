@@ -831,11 +831,11 @@ module.exports = class SpellView extends CocoView
     for aetherProblem, problemIndex in aether.getAllProblems()
       continue if key = aetherProblem.userInfo?.key and key of seenProblemKeys
       seenProblemKeys[key] = true if key
-      @problems.push problem = new Problem aether, aetherProblem, @ace, isCast, @options.levelID
+      @problems.push problem = new Problem { aether, aetherProblem, @ace, isCast, levelID: @options.levelID }
       if isCast and problemIndex is 0
-        if problem.aetherProblem.range?
+        if problem.range?
           lineOffsetPx = 0
-          for i in [0...problem.aetherProblem.range[0].row]
+          for i in [0...problem.row]
             lineOffsetPx += @aceSession.getRowLength(i) * @ace.renderer.lineHeight
           lineOffsetPx -= @ace.session.getScrollTop()
         Backbone.Mediator.publish 'tome:show-problem-alert', problem: problem, lineOffsetPx: Math.max lineOffsetPx, 0
@@ -993,19 +993,32 @@ module.exports = class SpellView extends CocoView
     @spell.transpile()  # TODO: is there any way we can avoid doing this if it hasn't changed? Causes a slight hang.
     @updateAether false, false
 
-  onWebDevError: (e) ->
+  onWebDevError: (error) ->
     annotations = @aceSession.getAnnotations()
     console.log {spellviewOnWebDevError: arguments}
-    newAnnotation = {
-      createdBy: 'web-dev-iframe'
-      row: e.line + @linesBeforeScript(@getSource())
-      column: e.column
-      raw: e.error
-      text: e.message
-      type: e.type
-    }
-    annotations.push(newAnnotation)
+    offsetError = _.merge {}, error, { line: error.line + @linesBeforeScript(@getSource()) }
+    console.log {error, offsetError}
+    problem = new Problem({ error: offsetError, @ace, levelID: @options.levelID })
+    @problems.push problem
+    
+    problemIndex = 0 # TODO: Unstub
+    if problemIndex is 0
+      lineOffsetPx = 0
+      for i in [0...problem.row]
+        lineOffsetPx += @aceSession.getRowLength(i) * @ace.renderer.lineHeight
+      lineOffsetPx -= @ace.session.getScrollTop()
+      Backbone.Mediator.publish 'tome:show-problem-alert', problem: problem, lineOffsetPx: Math.max lineOffsetPx, 0
+
+    # @saveUserCodeProblem(aether, aetherProblem)
+    console.log {annotation: problem.annotation}
+    annotations.push problem.annotation if problem.annotation
     @aceSession.setAnnotations annotations, true
+    Backbone.Mediator.publish 'tome:problems-updated', spell: @spell, problems: @problems, isCast: true
+
+    # TODO: Unset this on rerun
+    @ace.setStyle 'user-code-problem'
+    # TODO: When is this unset?
+    @ace.setStyle 'spell-cast'
 
   linesBeforeScript: (html) ->
     # TODO: refactor, make it work with multiple scripts. What to do when error is in level-creator's code?
