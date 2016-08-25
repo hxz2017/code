@@ -678,8 +678,9 @@ module.exports = class SpellView extends CocoView
     cast = @$el.parent().length
     @recompile cast, e.realTime
     @focus() if cast
-    @clearWebDevErrors()
-    @updateHTML create: true if @options.level.isType('web-dev')
+    if @options.level.isType('web-dev')
+      @clearWebDevErrors()
+      @updateHTML create: true
 
   onCodeReload: (e) ->
     return unless e.spell is @spell or not e.spell
