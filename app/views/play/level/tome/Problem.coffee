@@ -5,13 +5,15 @@ Range = ace.require('ace/range').Range
 module.exports = class Problem
   annotation: null
   markerRange: null
+  # Construction with AetherProblem will include all but `error`
+  # Construction with a standard error will have `error`, `isCast`, `levelID`, `ace`
   constructor: ({ @aether, @aetherProblem, @ace, isCast=false, @levelID, error }) ->
     if @aetherProblem
       @annotation = @buildAnnotationFromAetherProblem(@aetherProblem)
       { @lineMarkerRange, @textMarkerRange } = @buildMarkerRangesFromAetherProblem(@aetherProblem) if isCast
 
-      {@level, @range, @message, @hint, @userInfo} = @aetherProblem
-      {@row, @column: col} = @aetherProblem.range?[0]
+      { @level, @range, @message, @hint, @userInfo } = @aetherProblem
+      { @row, @column: col } = @aetherProblem.range?[0]
       @createdBy = 'aether'
     else
       @annotation = @buildAnnotationFromWebDevError(error)
