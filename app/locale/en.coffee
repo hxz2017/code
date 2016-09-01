@@ -52,7 +52,7 @@
     game_based: "When game-based learning systems are"
     compared: "compared"
     conventional: "against conventional assessment methods, the difference is clear: games are better at helping students retain knowledge, concentrate and"
-    perform_at_higher_level: "perform at a higher level of achievement"
+    perform_at_higher_level: "perform at a higher level of achievement." #{change}
     feedback: "Games also provide real-time feedback that allows students to adjust their solution path and understand concepts more holistically, instead of being limited to just “correct” or “incorrect” answers."
     real_game: "A real game, played with real coding."
     great_game: "A great game is more than just badges and achievements - it’s about a player’s journey, well-designed puzzles, and the ability to tackle challenges with agency and confidence."
@@ -92,6 +92,8 @@
     want_coco: "Want CodeCombat at your school?"
     form_select_role: "Select primary role"
     form_select_range: "Select class size"
+    mario_quote: "CodeCombat is really fun because you get to see that your character is doing what you made him do in the game."
+    jemma_quote: "This is an invaluable resource. The kids adored the game and it started them on a path to learn programming properly. "
 
   nav:
     play: "Levels"  # The top nav bar entry where players choose which levels to play
