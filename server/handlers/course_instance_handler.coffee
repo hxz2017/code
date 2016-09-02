@@ -117,35 +117,35 @@ CourseInstanceHandler = class CourseInstanceHandler extends Handler
     return doc
 
   getLevelSessionsAPI: (req, res, courseInstanceID) ->
-    console.log "user:", req.user
+    log.info "user:", req.user
     return @sendUnauthorizedError(res) if not req.user?
-    console.log "courseInstanceID:", courseInstanceID
+    log.info "courseInstanceID:", courseInstanceID
     CourseInstance.findById courseInstanceID, (err, courseInstance) =>
-      console.log "err:", err
+      log.info "err:", err
       return @sendDatabaseError(res, err) if err
-      console.log "courseInstance:", courseInstance
+      log.info "courseInstance:", courseInstance
       return @sendNotFoundError(res) unless courseInstance
       Course.findById courseInstance.get('courseID'), (err, course) =>
-        console.log "err2:", err
+        log.info "err2:", err
         return @sendDatabaseError(res, err) if err
-        console.log "course:", course
+        log.info "course:", course
         return @sendNotFoundError(res) unless course
         Campaign.findById course.get('campaignID'), (err, campaign) =>
-          console.log "err3:", err
+          log.info "err3:", err
           return @sendDatabaseError(res, err) if err
-          console.log "campaign:", campaign
+          log.info "campaign:", campaign
           return @sendNotFoundError(res) unless campaign
           levelIDs = (levelID for levelID of campaign.get('levels'))
           memberIDs = _.map courseInstance.get('members') ? [], (memberID) -> memberID.toHexString?() or memberID
-          console.log "memberIDs: ", memberIDs
+          log.info "memberIDs: ", memberIDs
           query = {$and: [{creator: {$in: memberIDs}}, {'level.original': {$in: levelIDs}}]}
-          console.log "query: ", query
+          log.info "query: ", query
           cursor = LevelSession.find(query)
           cursor = cursor.select(req.query.project) if req.query.project
           cursor.exec (err, documents) =>
-            console.log "err4:", err
+            log.info "err4:", err
             return @sendDatabaseError(res, err) if err?
-            console.log "Sending success!"
+            log.info "Sending success!"
             cleandocs = (LevelSessionHandler.formatEntity(req, doc) for doc in documents)
             @sendSuccess(res, cleandocs)
 
