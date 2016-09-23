@@ -179,7 +179,10 @@ exports.config =
     templates:
       defaultExtension: 'jade'
       joinTo:
-        'javascripts/app.js': regJoin('^app/templates/core')
+        'javascripts/app.js': [
+          regJoin('^app/templates/core')
+          regJoin('^app/views/core')
+        ]
         'javascripts/app/views/play.js': regJoin('^app/templates/play')
         'javascripts/app/views/game-menu.js': regJoin('^app/templates/game-menu')
         'javascripts/app/views/editor.js': regJoin('^app/templates/editor')

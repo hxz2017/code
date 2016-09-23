@@ -7,7 +7,6 @@ var groupings = {};
 
 while(directories.length) {
   directory = directories.pop()
-  console.log('*', directory)
 
   fs.readdirSync(directory).forEach((fileOrDir) => {
     absPath = directory + '/' + fileOrDir
@@ -29,23 +28,68 @@ while(directories.length) {
   })
 }
 
-_.forEach(groupings, (files) => {
-  var view = _.remove(files, (file) => _.string.startsWith(file, './app/views/'))[0]
-  if(!view || _.size(files) === 0)
-    return;
-  console.log('view', view, 'files', files)
-  var template = _.remove(files, (file) => _.string.startsWith(file, './app/templates/'))[0]
-  var viewFolder = view.slice(0, _.lastIndexOf(view, '/'))
-  if(template) {
-    viewFileData = fs.readFileSync(view, {encoding: 'utf8'})
-    templateFileName = template.slice(_.lastIndexOf(template, '/'))
-    newTemplatePath = viewFolder + templateFileName
-    console.log('renaming', template, 'to', newTemplatePath)
-    bareTemplateName = templateFileName.replace('.jade', '').slice(1)
-    re = new RegExp('templates/(\\S+\\/)?'+bareTemplateName, 'gm')
-    newViewFileData = viewFileData.replace(re, './'+bareTemplateName)
-    fs.writeFileSync(view, newViewFileData, {encoding: 'utf8'})
-    fs.renameSync(template, newTemplatePath)
-    throw new Error('stop')
+_.forEach(groupings, function(files) {
+  var viewAbsPath = _.remove(files, (file) => _.string.startsWith(file, './app/views/'))[0]
+  if(!viewAbsPath || _.size(files) === 0) return;
+  var viewFolder = viewAbsPath.slice(0, _.lastIndexOf(viewAbsPath, '/') + 1)
+
+  console.log('Migrating view:', viewAbsPath)
+  console.log('\tfiles:', JSON.stringify(files, null, '\t'))
+  if (!_.find(fs.readdirSync(viewFolder), (file) => _.string.startsWith(file, 'index.'))) {
+    // Deduce data
+    viewFileName = viewAbsPath.slice(_.lastIndexOf(viewAbsPath, '/')+1)
+    viewFileNameWithoutExt = viewFileName.replace('.coffee', '')
+    newViewFolder = viewFolder + viewFileNameWithoutExt + '/'
+    newViewAbsPath = newViewFolder + viewFileName
+    indexFilePath = newViewFolder + 'index.coffee'
+    indexFileData = `module.exports = require './${viewFileNameWithoutExt}'`
+
+    // Move view file into folder
+    console.log('\tMove view into dedicated folder, add index file')
+    try { fs.mkdirSync(newViewFolder) } catch (e) { ; }
+    fs.renameSync(viewAbsPath, newViewAbsPath)
+    fs.writeFileSync(indexFilePath, indexFileData, {encoding: 'utf8'})
+    
+    // Update variables
+    viewFolder = newViewFolder
+    viewAbsPath = newViewAbsPath
+    
+    // Update requires from within the view
+    viewFileData = fs.readFileSync(viewAbsPath, {encoding: 'utf8'})
+    viewFileData = viewFileData
+      .replace(new RegExp("(require[ (]['\"])\..\/", 'gm'), '$1../../') // require("../FileName") -> require("../../FileName")
+      .replace(new RegExp("(require[ (]['\"])\.\/", 'gm'), '$1../') // require("../FileName") -> require("../../FileName")
+    fs.writeFileSync(viewAbsPath, viewFileData, {encoding: 'utf8'})
   }
+
+  var templateAbsPath = _.remove(files, (file) => _.string.startsWith(file, './app/templates/'))[0]
+  if(templateAbsPath) {
+    // Deduce data
+    viewFileData = fs.readFileSync(viewAbsPath, {encoding: 'utf8'})
+    templateFileName = templateAbsPath.slice(_.lastIndexOf(templateAbsPath, '/'))
+    newTemplateAbsPath = viewFolder + templateFileName
+    templateFileNameWithoutExt = templateFileName.replace('.jade', '').slice(1)
+    oldTemplatePathRegExp = new RegExp('templates/(\\S+\\/)?'+templateFileNameWithoutExt, 'gm')
+    newViewFileData = viewFileData.replace(oldTemplatePathRegExp, './'+templateFileNameWithoutExt)
+  
+    // Move the template into the view folder, edit view require to point to new template location
+    fs.writeFileSync(viewAbsPath, newViewFileData, {encoding: 'utf8'})
+    fs.renameSync(templateAbsPath, newTemplateAbsPath)
+    
+    // Update variables
+    templateAbsPath = newTemplateAbsPath
+
+    // Update relative include paths
+    templateFileData = fs.readFileSync(templateAbsPath, {encoding: 'utf8'})
+    templateFileData = templateFileData
+      .replace("include ./teacher-dashboard-nav.jade", "include /templates/courses/teacher-dashboard-nav.jade")
+      .replace("include ../courses/teacher-dashboard-nav.jade", "include /templates/courses/teacher-dashboard-nav.jade")
+    fs.writeFileSync(templateAbsPath, templateFileData, { encoding: 'utf8' })
+  }
+  
+  //var testAbsPath = _.remove(files, (file) => _.string.startsWith('./test/app'))
+  //if(testAbsPath) {
+  //  // Deduce data
+  //  
+  //}
 });
