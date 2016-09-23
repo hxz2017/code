@@ -1,6 +1,6 @@
 CocoView = require 'views/core/CocoView'
 AuthModal = require 'views/core/AuthModal'
-template = require 'templates/core/create-account-modal/basic-info-view'
+template = require './basic-info-view'
 forms = require 'core/forms'
 errors = require 'core/errors'
 User = require 'models/User'

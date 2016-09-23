@@ -183,10 +183,19 @@ exports.config =
           regJoin('^app/templates/core')
           regJoin('^app/views/core')
         ]
-        'javascripts/app/views/play.js': regJoin('^app/templates/play')
-        'javascripts/app/views/game-menu.js': regJoin('^app/templates/game-menu')
-        'javascripts/app/views/editor.js': regJoin('^app/templates/editor')
-        'javascripts/whole-app.js': if TRAVIS then regJoin('^app/templates') else []
+        'javascripts/app/views/play.js': [
+          regJoin('^app/templates/play')
+          regJoin('^app/views/play')
+        ]
+        'javascripts/app/views/game-menu.js': [
+          regJoin('^app/templates/game-menu')
+          regJoin('^app/views/game-menu')
+        ]
+        'javascripts/app/views/editor.js': [
+          regJoin('^app/templates/editor')
+          regJoin('^app/views/editor')
+        ]
+        'javascripts/whole-app.js': if TRAVIS then [regJoin('^app/templates'), regJoin('^app/views')] else []
 
   framework: 'backbone'
 

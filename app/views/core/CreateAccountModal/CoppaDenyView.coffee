@@ -1,6 +1,6 @@
 CocoView = require 'views/core/CocoView'
 State = require 'models/State'
-template = require 'templates/core/create-account-modal/coppa-deny-view'
+template = require './coppa-deny-view'
 forms = require 'core/forms'
 contact = require 'core/contact'
 

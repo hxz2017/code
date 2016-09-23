@@ -1,5 +1,5 @@
 CocoView = require 'views/core/CocoView'
-template = require 'templates/core/create-account-modal/segment-check-view'
+template = require './segment-check-view'
 forms = require 'core/forms'
 Classroom = require 'models/Classroom'
 State = require 'models/State'

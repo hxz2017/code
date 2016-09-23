@@ -1,6 +1,6 @@
 CocoView = require 'views/core/CocoView'
 BasicInfoView = require 'views/core/CreateAccountModal/BasicInfoView'
-template = require 'templates/core/create-account-modal/single-sign-on-confirm-view'
+template = require './single-sign-on-confirm-view'
 forms = require 'core/forms'
 User = require 'models/User'
 
