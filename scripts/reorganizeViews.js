@@ -15,7 +15,7 @@ while(directories.length) {
     // .coffee => .js
     if(stat.isFile()) {
       var group = _.string.underscored(fileOrDir.split('.')[0])
-      if(_.string.endsWith(group, '_view')) {
+      if(_.string.endsWith(group, '_view') || _.string.endsWith(group, '_modal')) {
         if(!groupings[group]) groupings[group] = []
         groupings[group].push(absPath)
       }
@@ -27,6 +27,7 @@ while(directories.length) {
     }
   })
 }
+console.log('groupings', JSON.stringify(groupings, null, '\t'))
 
 _.forEach(groupings, function(files) {
   var viewAbsPath = _.remove(files, (file) => _.string.startsWith(file, './app/views/'))[0]
@@ -84,6 +85,8 @@ _.forEach(groupings, function(files) {
     templateFileData = templateFileData
       .replace("include ./teacher-dashboard-nav.jade", "include /templates/courses/teacher-dashboard-nav.jade")
       .replace("include ../courses/teacher-dashboard-nav.jade", "include /templates/courses/teacher-dashboard-nav.jade")
+      .replace("extends /templates/editor/modal/save-version-modal", "extends /views/editor/modal/SaveVersionModal/save-version-modal")
+      .replace("extends /templates/editor/modal/new-model-modal", "extends /views/editor/modal/NewModelModal/new-model-modal")
     fs.writeFileSync(templateAbsPath, templateFileData, { encoding: 'utf8' })
   }
   
@@ -95,5 +98,15 @@ _.forEach(groupings, function(files) {
   
     // Move test file into view folder
     fs.renameSync(testAbsPath, newTestAbsPath)
+  }
+
+  var styleAbsPath = _.remove(files, (file) => _.string.startsWith(file, './app/styles'))[0]
+  if(styleAbsPath) {
+    // Deduce data
+    styleFileName = styleAbsPath.slice(_.lastIndexOf(styleAbsPath, '/'))
+    newStyleAbsPath = viewFolder + styleFileName
+
+    // Move style file into view folder
+    fs.renameSync(styleAbsPath, newStyleAbsPath)
   }
 });
