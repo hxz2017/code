@@ -10,7 +10,6 @@ TRAVIS = process.env.COCO_TRAVIS_TEST
 #- regJoin replace a single '/' with '[\/\\]' so it can handle either forward or backslash
 regJoin = (s) -> new RegExp(s.replace(/\//g, '[\\\/\\\\]'))
 
-
 #- Build the config
 
 exports.config =
@@ -61,11 +60,11 @@ exports.config =
 
           # IMPORTANT: if you add to this, make sure you also add any other dependencies,
           # or better yet, put them in a 'core' folder.
-          regJoin('^app/schemas')
-          regJoin('^app/models')
-          regJoin('^app/collections')
-          regJoin('^app/core')
-          regJoin('^app/views/core')
+          regJoin('^app/schemas((?!\\.spec\\.).)*$') # spec files are not included
+          regJoin('^app/models((?!\\.spec\\.).)*$')
+          regJoin('^app/collections((?!\\.spec\\.).)*$')
+          regJoin('^app/core((?!\\.spec\\.).)*$')
+          regJoin('^app/views/core((?!\\.spec\\.).)*$')
           'app/locale/locale.coffee'
           'app/locale/en.coffee'
           'app/lib/sprites/SpriteBuilder.coffee' # loaded by ThangType
@@ -128,7 +127,10 @@ exports.config =
         'javascripts/app/vendor/three.js': 'bower_components/three.js/three.min.js'
 
         #- test, demo libraries
-        'javascripts/app/tests.js': regJoin('^test/app/')
+        'javascripts/app/tests.js': [
+          regJoin('^test/app/')
+          'app/**/*.spec.coffee'
+        ]
         'javascripts/app/demo-app.js': regJoin('^test/demo/')
 
         #- More output files are generated at the below

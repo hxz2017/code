@@ -87,9 +87,13 @@ _.forEach(groupings, function(files) {
     fs.writeFileSync(templateAbsPath, templateFileData, { encoding: 'utf8' })
   }
   
-  //var testAbsPath = _.remove(files, (file) => _.string.startsWith('./test/app'))
-  //if(testAbsPath) {
-  //  // Deduce data
-  //  
-  //}
+  var testAbsPath = _.remove(files, (file) => _.string.startsWith(file, './test/app'))[0]
+  if(testAbsPath) {
+    // Deduce data
+    testFileName = testAbsPath.slice(_.lastIndexOf(testAbsPath, '/'))
+    newTestAbsPath = viewFolder + testFileName
+  
+    // Move test file into view folder
+    fs.renameSync(testAbsPath, newTestAbsPath)
+  }
 });

@@ -161,7 +161,7 @@ describe 'ConvertToTeacherAccountView (/teachers/update-account)', ->
       args = application.router.navigate.calls.argsFor(0)
       expect(args[0]).toBe('/teachers/classes')
 
-     it 'sets a teacher role', ->
+    it 'sets a teacher role', ->
       request = _.last(view.trialRequest.fakeRequests)
       request.respondWith({
         status: 201

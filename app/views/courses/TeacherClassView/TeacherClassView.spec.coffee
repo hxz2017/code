@@ -61,12 +61,12 @@ describe 'TeacherClassView', ->
         @unfinishedStudent = @students.last()
         for level in @levels.models
           sessions.push(factories.makeLevelSession(
-              {state: {complete: true}, playtime: 60},
-              {level, creator: @finishedStudent})
+            {state: {complete: true}, playtime: 60},
+            {level, creator: @finishedStudent})
           )
         sessions.push(factories.makeLevelSession(
-            {state: {complete: true}, playtime: 60},
-            {level: @levels.first(), creator: @unfinishedStudent})
+          {state: {complete: true}, playtime: 60},
+          {level: @levels.first(), creator: @unfinishedStudent})
         )
         @levelSessions = new LevelSessions(sessions)
 
@@ -163,12 +163,12 @@ describe 'TeacherClassView', ->
         for level in @levels.models
           continue if classLanguage and classLanguage is level.get('primerLanguage') 
           sessions.push(factories.makeLevelSession(
-              {state: {complete: true}, playtime: 60},
-              {level, creator: @finishedStudent})
+            {state: {complete: true}, playtime: 60},
+            {level, creator: @finishedStudent})
           )
         sessions.push(factories.makeLevelSession(
-            {state: {complete: true}, playtime: 60},
-            {level: @levels.first(), creator: @unfinishedStudent})
+          {state: {complete: true}, playtime: 60},
+          {level: @levels.first(), creator: @unfinishedStudent})
         )
         @levelSessions = new LevelSessions(sessions)
 
@@ -222,12 +222,12 @@ describe 'TeacherClassView', ->
         for level in @levels.models
           continue if classLanguage and classLanguage is level.get('primerLanguage')
           sessions.push(factories.makeLevelSession(
-              {state: {complete: true}, playtime: 60},
-              {level, creator: @finishedStudent})
+            {state: {complete: true}, playtime: 60},
+            {level, creator: @finishedStudent})
           )
         sessions.push(factories.makeLevelSession(
-            {state: {complete: true}, playtime: 60},
-            {level: @levels.first(), creator: @unfinishedStudent})
+          {state: {complete: true}, playtime: 60},
+          {level: @levels.first(), creator: @unfinishedStudent})
         )
         @levelSessions = new LevelSessions(sessions)
   
