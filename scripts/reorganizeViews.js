@@ -5,8 +5,12 @@ _.string = require('underscore.string')
 var directories = ['./app/views', './app/templates', './app/styles', './test/app/views']
 var groupings = {};
 
+// TODO: Rename template and sass files so they match their view names and get moved properly later on
+// Thinking a map can be formed while walking files. It's now set up so that views are all looked at
+// first.
+
 while(directories.length) {
-  directory = directories.pop()
+  directory = directories.shift()
 
   fs.readdirSync(directory).forEach((fileOrDir) => {
     absPath = directory + '/' + fileOrDir
@@ -17,13 +21,13 @@ while(directories.length) {
       var group = _.string.underscored(fileOrDir.split('.')[0])
       if(_.string.endsWith(group, '_view') || _.string.endsWith(group, '_modal')) {
         if(!groupings[group]) groupings[group] = []
-        groupings[group].push(absPath)
+        groupings[group].unshift(absPath)
       }
     }
   
     // Add to list of directories to walk
     if(stat.isDirectory()) {
-      directories.push(absPath);
+      directories.unshift(absPath);
     }
   })
 }
