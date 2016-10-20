@@ -15,18 +15,20 @@ module.exports = class SaveLevelModal extends SaveVersionModal
 
   events:
     'click #save-version-button': 'commitLevel'
+    'click .save-component-btn': 'onClickSaveComponentButton'
     'submit form': 'commitLevel'
 
   constructor: (options) ->
     super options
     @level = options.level
     @buildTime = options.buildTime
+    @modifiedComponents = _.filter @supermodel.getModels(LevelComponent), @shouldSaveEntity
 
   getRenderData: (context={}) ->
     context = super(context)
     context.level = @level
     context.levelNeedsSave = @level.hasLocalChanges()
-    context.modifiedComponents = _.filter @supermodel.getModels(LevelComponent), @shouldSaveEntity
+    context.modifiedComponents = @modifiedComponents
     context.modifiedSystems = _.filter @supermodel.getModels(LevelSystem), @shouldSaveEntity
     @hasChanges = (context.levelNeedsSave or context.modifiedComponents.length or context.modifiedSystems.length)
     @lastContext = context
@@ -113,3 +115,29 @@ module.exports = class SaveLevelModal extends SaveVersionModal
             url = "/editor/level/#{@level.get('slug') or @level.id}"
             document.location.href = url
             @hide()  # This will destroy everything, so do it last
+
+  onClickSaveComponentButton: (e) ->
+    e.preventDefault()
+    button = $(e.currentTarget)
+    componentId = button.data('component-id')
+    component = _.find(@modifiedComponents, (component) -> component.id is componentId)
+    form = button.closest('form')
+    commitMessageField = commitMessage = form.find('.commit-message input')
+    commitMessage = commitMessageField.val()
+    component.set('commitMessage', commitMessage)
+
+    # hack to get saveNewMinorVersion to work. Should not manually set url to each model!
+    component.url = -> "/db/level.component/#{@id}"
+
+    jqxhr = component.saveNewMinorVersion()
+    return if not jqxhr
+    button.attr('disabled', true)
+    commitMessageField.attr('disabled', true)
+    button.text('Saving...')
+    Promise.resolve(jqxhr)
+    .then =>
+      form.replaceWith('Saved')
+    .catch =>
+      button.attr('disabled', false).text('Save Failed')
+      commitMessageField.attr('disabled', false)
+    

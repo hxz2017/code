@@ -52,5 +52,18 @@ LevelComponentSchema.pre('save', (next) ->
 )
 
 LevelComponentSchema.statics.jsonSchema = jsonSchema
+LevelComponentSchema.statics.editableProperties = [
+  'system'
+  'description'
+  'code'
+  'js'
+  'codeLanguage'
+  'dependencies'
+  'propertyDocumentation'
+  'configSchema'
+  'name'
+  'i18nCoverage'
+]
+LevelComponentSchema.statics.postEditableProperties = []
 
 module.exports = LevelComponent = mongoose.model('level.component', LevelComponentSchema)

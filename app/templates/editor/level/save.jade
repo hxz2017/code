@@ -44,6 +44,7 @@ block modal-body-content
           label
             input(id=id + "-version-is-major", name="version-is-major", type="checkbox")
             span(data-i18n="versions.new_major_version") New Major Version
+      button.btn.btn-primary.save-component-btn(data-component-id=component.id) Save Just Me
 
   if modifiedSystems.length
     hr
