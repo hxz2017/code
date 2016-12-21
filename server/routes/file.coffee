@@ -27,7 +27,7 @@ fileGet = (req, res) ->
   query = parsePathIntoQuery(req.path)
 
   if not query.filename # it's a folder, return folder contents
-    Grid.gfs.collection('media').find query, (err, cursor) ->
+    Grid.gfs.collection('media').find query, {readPreference: config.mongo.readpref}, (err, cursor) ->
       return errors.serverError(res) if err
       results = cursor.toArray (err, results) ->
         return errors.serverError(res) if err
@@ -36,9 +36,9 @@ fileGet = (req, res) ->
         res.end()
 
   else # it's a single file
-    Grid.gfs.collection('media').findOne query, (err, filedata) =>
+    Grid.gfs.collection('media').findOne query, {readPreference: config.mongo.readpref}, (err, filedata) =>
       return errors.notFound(res) if not filedata
-      readstream = Grid.gfs.createReadStream({_id: filedata._id, root: 'media'})
+      readstream = Grid.gfs.createReadStream({_id: filedata._id, root: 'media', readPreference: config.mongo.readpref})
       if req.headers['if-modified-since'] is filedata.uploadDate
         res.status(304)
         return res.end()
