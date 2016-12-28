@@ -1,55 +1,6 @@
 c = require './../schemas'
 ThangComponentSchema = require './thang_component'
 
-defaultTasks = [
-  'Name the level.'
-  'Create a Referee stub, if needed.'
-  'Do basic set decoration.'
-  'Publish.'
-
-  'Build the level.'
-  'Set up goals.'
-  'Write the sample code.'
-  'Make sure the level ends promptly on success and failure.'
-
-  'Choose the Existence System lifespan and frame rate.'
-  'Choose the UI System paths and coordinate hover if needed.'
-  'Choose the AI System pathfinding and Vision System line of sight.'
-
-  'Adjust script camera bounds.'
-  'Choose music file in Introduction script.'
-  'Choose autoplay in Introduction script.'
-
-  'Add Lua/CoffeeScript/Java.'
-
-  'Write the description.'
-  'Write the guide.'
-
-  'Write a loading tip, if needed.'
-  'Add programming concepts covered.'
-  'Mark whether it requires a subscription.'
-  'Choose leaderboard score types.'
-
-  'Do thorough set decoration.'
-  'Playtest with a slow/tough hero.'
-  'Playtest with a fast/weak hero.'
-  'Playtest with a couple random seeds.'
-  'Remove/simplify unnecessary doodad collision.'
-
-  'Add to a campaign.'
-  'Choose level options like required/restricted gear.'
-  'Create achievements, including unlocking next level.'
-
-  'Click the Populate i18n button.'
-  'Add i18n field for the sample code comments.'
-  'Release to adventurers via MailChimp.'
-
-  'Release to everyone via MailChimp.'
-
-  'Check completion/engagement/problem analytics.'
-  'Add a walkthrough video.'
-]
-
 SpecificArticleSchema = c.object()
 c.extendNamedProperties SpecificArticleSchema  # name first
 SpecificArticleSchema.properties.body = {type: 'string', title: 'Content', description: 'The body content of the article, in Markdown.', format: 'markdown'}
@@ -262,7 +213,6 @@ LevelSchema = c.object {
   'default':
     name: 'Ineffable Wizardry'
     description: 'This level is indescribably flarmy.'
-    tasks: (name: t, complete: false for t in defaultTasks)
     documentation: {}
     scripts: []
     thangs: []
@@ -314,10 +264,11 @@ _.extend LevelSchema.properties,
   i18n: {type: 'object', format: 'i18n', props: ['name', 'description', 'loadingTip', 'studentPlayInstructions'], description: 'Help translate this level'}
   banner: {type: 'string', format: 'image-file', title: 'Banner'}
   goals: c.array {title: 'Goals', description: 'An array of goals which are visible to the player and can trigger scripts.'}, GoalSchema
-  type: c.shortString(title: 'Type', description: 'What kind of level this is.', 'enum': ['campaign', 'ladder', 'ladder-tutorial', 'hero', 'hero-ladder', 'hero-coop', 'course', 'course-ladder', 'game-dev', 'web-dev'])
+  type: c.shortString(title: 'Type', description: 'What type of level this is.', 'enum': ['campaign', 'ladder', 'ladder-tutorial', 'hero', 'hero-ladder', 'hero-coop', 'course', 'course-ladder', 'game-dev', 'web-dev'])
+  kind: c.shortString(title: 'Kind', description: 'Similar to type, but just for our organization.', enum: ['demo', 'usage', 'mastery', 'advanced', 'practice', 'challenge'])
   terrain: c.terrainString
   requiresSubscription: {title: 'Requires Subscription', description: 'Whether this level is available to subscribers only.', type: 'boolean'}
-  tasks: c.array {title: 'Tasks', description: 'Tasks to be completed for this level.', default: (name: t for t in defaultTasks)}, c.task
+  tasks: c.array {title: 'Tasks', description: 'Tasks to be completed for this level.'}, c.task
   helpVideos: c.array {title: 'Help Videos'}, c.object {default: {style: 'eccentric', url: '', free: false}},
     style: c.shortString title: 'Style', description: 'Like: original, eccentric, scripted, edited, etc.'
     free: {type: 'boolean', title: 'Free', description: 'Whether this video is freely available to all players without a subscription.'}
@@ -327,7 +278,7 @@ _.extend LevelSchema.properties,
   practice: { type: 'boolean' }
   practiceThresholdMinutes: {type: 'number', description: 'Players with larger playtimes may be directed to a practice level.'}
   primerLanguage: { type: 'string', enum: ['javascript', 'python'], description: 'Programming language taught by this level.' }
-  shareable: { title: 'Shareable', type: ['string', 'boolean'], enum: [false, true, 'project'], description: 'Whether the level is not shareable, shareable, or a sharing-encouraged project level.' }
+  shareable: { title: 'Shareable', type: ['string', 'boolean'], enum: [false, true, 'project'], description: 'Whether the level is not shareable (false), shareable (true), or a sharing-encouraged project level ("project"). Make sure to use "project" for project levels so they show up correctly in the Teacher Dashboard.' }
 
   # Admin flags
   adventurer: { type: 'boolean' }
@@ -355,25 +306,26 @@ _.extend LevelSchema.properties,
       pattern: { type: 'string' }
     }
   }
-  requiredGear: { type: 'object', additionalProperties: {
+  requiredGear: { type: 'object', title: 'Required Gear', description: 'Slots that should require one of a set array of items for that slot', additionalProperties: {
     type: 'array'
     items: { type: 'string', links: [{rel: 'db', href: '/db/thang.type/{($)}/version'}], format: 'latest-version-original-reference' }
   }}
-  restrictedGear: { type: 'object', additionalProperties: {
+  restrictedGear: { type: 'object', title: 'Restricted Gear', description: 'Slots that should restrict all of a set array of items for that slot', additionalProperties: {
     type: 'array'
     items: { type: 'string', links: [{rel: 'db', href: '/db/thang.type/{($)}/version'}], format: 'latest-version-original-reference' }
   }}
-  requiredProperties: { type: 'array', items: {type: 'string'}, description: 'Names of properties a hero must have equipped to play.' }
-  restrictedProperties: { type: 'array', items: {type: 'string'}, description: 'Names of properties a hero must not have equipped to play.' }
-  recommendedHealth: { type: 'integer', minimum: 0, exclusiveMinimum: true, 'If set, will show the recommended health to be able to beat this level with the intended main solution to the player when choosing equipment.' }
-  allowedHeroes: { type: 'array', items: {
+  requiredProperties: { type: 'array', items: {type: 'string'}, description: 'Names of properties a hero must have equipped to play.', format: 'solution-gear', title: 'Required Properties' }
+  restrictedProperties: { type: 'array', items: {type: 'string'}, description: 'Names of properties a hero must not have equipped to play.', title: 'Restricted Properties' }
+  recommendedHealth: { type: 'number', minimum: 0, exclusiveMinimum: true, description: 'If set, will show the recommended health to be able to beat this level with the intended main solution to the player when choosing equipment.', format: 'solution-stats', title: 'Recommended Health' }
+  allowedHeroes: { type: 'array', title: 'Allowed Heroes', description: 'Which heroes can play this level. For any hero, leave unset.', items: {
     type: 'string', links: [{rel: 'db', href: '/db/thang.type/{($)}/version'}], format: 'latest-version-original-reference'
   }}
   campaign: c.shortString title: 'Campaign', description: 'Which campaign this level is part of (like "desert").', format: 'hidden'  # Automatically set by campaign editor.
   campaignIndex: c.int title: 'Campaign Index', description: 'The 0-based index of this level in its campaign.', format: 'hidden'  # Automatically set by campaign editor.
   scoreTypes: c.array {title: 'Score Types', description: 'What metric to show leaderboards for.', uniqueItems: true},
      c.shortString(title: 'Score Type', 'enum': ['time', 'damage-taken', 'damage-dealt', 'gold-collected', 'difficulty'])  # TODO: good version of LoC; total gear value.
-  concepts: c.array {title: 'Programming Concepts', description: 'Which programming concepts this level covers.', uniqueItems: true}, c.concept
+  concepts: c.array {title: 'Programming Concepts', description: 'Which programming concepts this level covers.', uniqueItems: true, format: 'concepts-list'}, c.concept
+  primaryConcepts: c.array {title: 'Primary Concepts', description: 'The main 1-3 concepts this level focuses on.', uniqueItems: true}, c.concept
   picoCTFProblem: { type: 'string', description: 'Associated picoCTF problem ID, if this is a picoCTF level' }
 
 

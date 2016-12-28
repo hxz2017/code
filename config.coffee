@@ -211,7 +211,7 @@ exports.config =
     assetsmanager:
       copyTo:
         'lib/ace': ['node_modules/ace-builds/src-min-noconflict/*']
-        'fonts': ['bower_components/openSansCondensed/!(*bower.json)', 'bower_components/openSans/!(*bower.json)']
+        'fonts': ['bower_components/openSansCondensed/!(*bower.json)', 'bower_components/openSans/!(*bower.json)', 'bower_components/font-awesome/fonts/*']
         'javascripts': ['bower_components/esper.js/esper.modern.js']
     autoReload:
       delay: 1000
@@ -263,3 +263,9 @@ for file in jadeFiles
     numBundles += 1
 
 console.log "Got #{coffeeFiles.length} coffee files and #{jadeFiles.length} jade files (bundled #{numBundles} of them together)."
+
+if process.env.GIT_SHA
+  info =
+    sha: process.env.GIT_SHA 
+  fs.writeFile '.build_info.json', JSON.stringify info, null, '  '
+  console.log( "Wrote build information file");

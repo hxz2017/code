@@ -14,6 +14,7 @@ LevelSession = require '../models/LevelSession'
 config = require '../../server_config'
 oauth = require '../lib/oauth'
 facebook = require '../lib/facebook'
+OAuthProvider = require '../models/OAuthProvider'
 
 module.exports =
   checkDocumentPermissions: (req, res, next) ->
@@ -68,7 +69,9 @@ module.exports =
   redirectAfterLogin: wrap (req, res) ->
     activity = req.user.trackActivity 'login', 1
     yield req.user.update {activity: activity}
-    if req.user.get('role') is 'student'
+    if req.shouldRedirect
+      res.redirect req.shouldRedirect
+    else if req.user.get('role') is 'student'
       res.redirect '/students'
     else if req.user.get('role')
       res.redirect '/teachers/classes'
@@ -132,12 +135,30 @@ module.exports =
     
     user = yield User.findOne({cleverID: userInfo.data.id})
     unless user
+      email = lookup.data.email
+      if email?
+        existingUserWithEmail = yield User.findOne({emailLower: email.toLowerCase()})
+
+      if existingUserWithEmail or not email?
+        email = "#{userInfo.data.id}@clever.user"
+        existingUserWithEmail = yield User.findOne({emailLower: email.toLowerCase()})
+      if existingUserWithEmail
+        email = undefined
+
+      name = "Clever"
+      if lookup.data.name
+        name = "#{lookup.data.name?.first}#{lookup.data.name.last?.substr(0,1)}"
+
+      User.unconflictNameAsync = Promise.promisify(User.unconflictName)
+      name = yield User.unconflictNameAsync name
+
       user = new User
         anonymous: false
         role: if userInfo.data.type is 'student' then 'student' else 'teacher'
         cleverID: userInfo.data.id
         emailVerified: true
-        email: lookup.data.email
+        email: email
+        name: name
 
       user.set 'testGroupNumber', Math.floor(Math.random() * 256)  # also in app/core/auth
 
@@ -171,7 +192,7 @@ module.exports =
     next()
     
   loginByOAuthProvider: wrap (req, res, next) ->
-    { provider: providerId, accessToken, code } = req.query
+    { provider: providerId, accessToken, code, redirect } = req.query
     identity = yield oauth.getIdentityFromOAuth({providerId, accessToken, code})
     
     user = yield User.findOne({oAuthIdentities: { $elemMatch: identity }})
@@ -180,6 +201,13 @@ module.exports =
     
     req.loginAsync = Promise.promisify(req.login)
     yield req.loginAsync user
+    
+    if redirect
+      req.shouldRedirect = redirect
+    else
+      provider = yield OAuthProvider.findById(providerId)
+      req.shouldRedirect = provider.get('redirectAfterLogin')
+    
     next()
     
   spy: wrap (req, res) ->

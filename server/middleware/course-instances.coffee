@@ -3,6 +3,7 @@ wrap = require 'co-express'
 Promise = require 'bluebird'
 database = require '../commons/database'
 mongoose = require 'mongoose'
+AnalyticsLogEvent = require '../models/AnalyticsLogEvent'
 TrialRequest = require '../models/TrialRequest'
 CourseInstance = require '../models/CourseInstance'
 Classroom = require '../models/Classroom'
@@ -31,6 +32,7 @@ module.exports =
     courseInstance = yield database.getDocFromHandle(req, CourseInstance)
     if not courseInstance
       throw new errors.NotFound('Course Instance not found.')
+    courseId = courseInstance.get('courseID')
 
     classroom = yield Classroom.findById courseInstance.get('classroomID')
     if not classroom
@@ -45,15 +47,26 @@ module.exports =
     unless ownsClassroom or addingSelf
       throw new errors.Forbidden('You must own the classroom to add members')
 
-    # Only the enrolled users
-    users = yield User.find({ _id: { $in: userIDs }}).select('coursePrepaid coursePrepaidID') # TODO: remove coursePrepaidID once migrated
-    usersAreEnrolled = _.all((user.isEnrolled() for user in users))
-
-    course = yield Course.findById courseInstance.get('courseID')
+    course = yield Course.findById courseId
     throw new errors.NotFound('Course referenced by course instance not found') unless course
 
-    if not (course.get('free') or usersAreEnrolled)
-      throw new errors.PaymentRequired('Cannot add users to a course instance until they are added to a prepaid')
+    # Only the enrolled users
+    users = yield User.find({ _id: { $in: userIDs }}).select('coursePrepaid coursePrepaidID') # TODO: remove coursePrepaidID once migrated
+    userPrepaidsIncludeCourse = _.all((user.prepaidIncludesCourse(course) for user in users))
+
+    if not (course.get('free') or userPrepaidsIncludeCourse)
+      throw new errors.PaymentRequired('Cannot add users to a course instance until they are added to a prepaid that includes this course')
+
+    unless courseInstance.get('members')?.length
+      {oldCourseCount, newCourseCount, oldLevelCount, newLevelCount} = yield classroom.setUpdatedCourse({courseId})
+      database.validateDoc(classroom)
+      yield classroom.save()
+      if newCourseCount > oldCourseCount or newLevelCount > oldLevelCount
+        # TODO: capture level updates that do not increase the level count
+        AnalyticsLogEvent.logEvent(req.user._id, 'Classroom Autoupdate Course', {
+          classroomId: classroom.get('_id')
+          courseId, oldCourseCount, newCourseCount, oldLevelCount, newLevelCount
+        })
 
     userObjectIDs = (mongoose.Types.ObjectId(userID) for userID in userIDs)
 
@@ -93,14 +106,19 @@ module.exports =
     # Get level completions and playtime
     currentLevelSession = null
     levelIDs = (level.original.toString() for level in courseLevels)
-    query = {$and: [{creator: req.user.id}, {'level.original': {$in: levelIDs}}]}
+    query = {$and: [
+      {creator: req.user.id},
+      {'level.original': {$in: levelIDs}}
+      {codeLanguage: classroom.get('aceConfig.language')}
+    ]}
     levelSessions = yield LevelSession.find(query, {level: 1, playtime: 1, state: 1})
     levelCompleteMap = {}
     for levelSession in levelSessions
       currentLevelSession = levelSession if levelSession.id is sessionID
       levelCompleteMap[levelSession.get('level')?.original] = levelSession.get('state')?.complete
-    unless currentLevelSession then throw new errors.NotFound('Level session not found.') 
-    needsPractice = utils.needsPractice(currentLevelSession.get('playtime'), currentLevel.get('practiceThresholdMinutes'))
+    unless currentLevelSession then throw new errors.NotFound('Level session not found.')
+    needsPractice = if currentLevel.get('type') in ['course-ladder', 'ladder'] then false
+    else utils.needsPractice(currentLevelSession.get('playtime'), currentLevel.get('practiceThresholdMinutes'))
 
     # Find next level
     levels = []
@@ -152,8 +170,8 @@ module.exports =
       throw new errors.NotFound('Course not found.')
 
     res.status(200).send(course.toObject({req: req}))
-    
-    
+
+
   fetchRecent: wrap (req, res) ->
     throw new errors.Unauthorized('You must be an administrator.') unless req.user?.isAdmin()
 
@@ -185,3 +203,32 @@ module.exports =
     query = {$and: [{name: {$ne: 'Single Player'}}, {hourOfCode: {$ne: true}}]}
     courseInstances = yield CourseInstance.find(query, { members: 1, ownerID: 1}).lean()
     res.status(200).send(courseInstances)
+
+  fetchMyCourseLevelSessions: wrap (req, res) ->
+    courseInstance = yield database.getDocFromHandle(req, CourseInstance)
+    if not courseInstance
+      throw new errors.NotFound('Course Instance not found.')
+
+    classroom = yield Classroom.findById(courseInstance.get('classroomID'))
+    if not classroom
+      throw new errors.NotFound('Classroom not found.')
+
+    # Construct a query for finding all sessions appropriate for the given course instance and related
+    # classroom. For the most part, that means sessions that match the language of the classroom, but for
+    # primer levels, need to use the level primerLanguage setting. Each $or entry is for one level session.
+    $or = []
+    for course in classroom.get('courses') when course._id.equals(courseInstance.get('courseID'))
+      for level in course.levels when not _.contains(level.type, 'ladder')
+        $or.push({
+          'level.original': level.original + "",
+          codeLanguage: level.primerLanguage or classroom.get('aceConfig.language')
+        })
+    if $or.length
+      query = {$and: [
+        {creator: req.user.id},
+        { $or }
+      ]}
+      levelSessions = yield LevelSession.find(query).select(parse.getProjectFromReq(req))
+      res.send(session.toObject({req}) for session in levelSessions)
+    else
+      res.send []

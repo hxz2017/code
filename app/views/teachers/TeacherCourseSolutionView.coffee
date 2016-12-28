@@ -3,7 +3,7 @@ RootView = require 'views/core/RootView'
 CocoCollection = require 'collections/CocoCollection'
 Course = require 'models/Course'
 Level = require 'models/Level'
-
+utils = require 'core/utils'
 module.exports = class TeacherCourseSolutionView extends RootView
   id: 'teacher-course-solution-view'
   template: require 'templates/teachers/teacher-course-solution-view'
@@ -48,16 +48,30 @@ module.exports = class TeacherCourseSolutionView extends RootView
         playerCodeTag = utils.extractPlayerCodeTag(translatedDefaultCode)
         finalDefaultCode = if playerCodeTag then playerCodeTag else translatedDefaultCode
         level.set 'begin', finalDefaultCode
-        solution = _.find(programmableMethod.solutions, (x) => x.language is @language)
+        solution = _.find(programmableMethod.solutions, (x) => x.language is (level.get('primerLanguage') or @language))
         try
           solutionText = _.template(solution?.source)(programmableMethod.context)
         catch error
           solutionText = solution?.source
           console.error "Couldn't create solution template of", solution?.source, "\nwith context", programmableMethod.context, "\nError:", error
-        level.set 'solution',  solutionText
+        solutionPlayerCodeTag = utils.extractPlayerCodeTag(solutionText)
+        finalSolutionCode = if solutionPlayerCodeTag then solutionPlayerCodeTag else solutionText
+        level.set 'solution',  finalSolutionCode
     levels = []
     for level in @levels?.models when level.get('original')
       continue if @language? and level.get('primerLanguage') is @language
       levels.push({key: level.get('original'), practice: level.get('practice') ? false})
     @levelNumberMap = utils.createLevelNumberMap(levels)
     @render?()
+
+  afterRender: ->
+    super()
+    lang = @language
+    @$el.find('pre>code').each ->
+      els = $(@)
+      c = els.parent()
+      aceEditor = utils.initializeACE c[0], lang
+      aceEditor.setShowInvisibles false
+      aceEditor.setBehavioursEnabled false
+      aceEditor.setAnimatedScroll false
+      aceEditor.$blockScrolling = Infinity

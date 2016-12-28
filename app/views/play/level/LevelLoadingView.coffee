@@ -24,24 +24,26 @@ module.exports = class LevelLoadingView extends CocoView
 
   afterRender: ->
     super()
-    @$el.find('.tip.rare').remove() if _.random(1, 10) < 9
-    tips = @$el.find('.tip').addClass('to-remove')
-    tip = _.sample(tips)
-    $(tip).removeClass('to-remove').addClass('secret')
-    @$el.find('.to-remove').remove()
+    unless @level?.get('loadingTip')
+      @$el.find('.tip.rare').remove() if _.random(1, 10) < 9
+      tips = @$el.find('.tip').addClass('to-remove')
+      tip = _.sample(tips)
+      $(tip).removeClass('to-remove').addClass('secret')
+      @$el.find('.to-remove').remove()
     @onLevelLoaded level: @options.level if @options.level?.get('goals')  # If Level was already loaded.
+    @configureACEEditors()
+
+  configureACEEditors: ->
+    codeLanguage = @session?.get('codeLanguage') or me.get('aceConfig')?.language or 'python'
+    oldEditor.destroy() for oldEditor in @aceEditors ? []
+    @aceEditors = []
+    aceEditors = @aceEditors
+    @$el.find('pre:has(code[class*="lang-"])').each ->
+      aceEditor = utils.initializeACE @, codeLanguage
+      aceEditors.push aceEditor
 
   afterInsert: ->
     super()
-    _.defer =>
-      return if @destroyed
-      # Make sure that we are as tall now as we will be when the canvas wrapper is resized to the right height.
-      currentCanvasHeight = 589
-      canvasAspectRatio = 924 / 589
-      eventualCanvasWidth = $('#canvas-wrapper').outerWidth()
-      eventualCanvasHeight = eventualCanvasWidth / canvasAspectRatio
-      newHeight = Math.max 769, @$el.outerHeight() + eventualCanvasHeight - currentCanvasHeight + 2
-      @$el.addClass('manually-sized').css('height', newHeight)
 
   onLevelLoaded: (e) ->
     return if @level
@@ -72,7 +74,8 @@ module.exports = class LevelLoadingView extends CocoView
     tip = @$el.find('.tip')
     if @level.get('loadingTip')
       loadingTip = utils.i18n @level.attributes, 'loadingTip'
-      tip.text(loadingTip)
+      loadingTip = marked(loadingTip)
+      tip.html(loadingTip).removeAttr('data-i18n')
     tip.removeClass('secret')
 
   prepareIntro: ->
@@ -158,6 +161,7 @@ module.exports = class LevelLoadingView extends CocoView
   resize: ->
     maxHeight = $('#page-container').outerHeight(true)
     minHeight = $('#code-area').outerHeight(true)
+    minHeight -= 20
     @$el.css height: maxHeight
     @$loadingDetails.css minHeight: minHeight, maxHeight: maxHeight
     if @intro
@@ -188,6 +192,7 @@ module.exports = class LevelLoadingView extends CocoView
       html = marked utils.filterMarkdownCodeLanguages(utils.i18n(@intro, 'body'), language)
     @$el.find('.intro-doc').removeClass('hidden').find('.intro-doc-content').html html
     @resize()
+    @configureACEEditors()
 
   onUnveilEnded: =>
     return if @destroyed

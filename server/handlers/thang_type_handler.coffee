@@ -1,5 +1,6 @@
 ThangType = require './../models/ThangType'
 Handler = require '../commons/Handler'
+mongoose = require 'mongoose'
 
 ThangTypeHandler = class ThangTypeHandler extends Handler
   modelClass: ThangType
@@ -22,6 +23,7 @@ ThangTypeHandler = class ThangTypeHandler extends Handler
     'kind'
     'raster'
     'rasterIcon'
+    'poseImage'
     'featureImages'
     'dollImages'
     'spriteType'
@@ -36,6 +38,7 @@ ThangTypeHandler = class ThangTypeHandler extends Handler
     'tasks'
     'terrains'
     'prerenderedSpriteSheetData'
+    'restricted'
   ]
 
   hasAccess: (req) ->
@@ -43,6 +46,7 @@ ThangTypeHandler = class ThangTypeHandler extends Handler
 
   hasAccessToDocument: (req, document, method=null) ->
     method = (method or req.method).toLowerCase()
+    return false if document.get('restricted') and not req.user?.isAdmin() and not (document.get('restricted') is 'code-play' and req.features.codePlay)
     return true if method is 'get'
     return true if req.user?.isAdmin() or req.user?.isArtisan()
     return true if method is 'post' and @isJustFillingTranslations(req, document)
@@ -50,7 +54,7 @@ ThangTypeHandler = class ThangTypeHandler extends Handler
 
   get: (req, res) ->
     if req.query.view in ['items', 'heroes', 'i18n-coverage']
-      projection = {}
+      projection = {restricted: 1}
       if req.query.project
         projection[field] = 1 for field in req.query.project.split(',')
       query = slug: {$exists: true}
@@ -71,12 +75,18 @@ ThangTypeHandler = class ThangTypeHandler extends Handler
       if limit? and limit < 1000
         q.limit(limit)
 
-      q.cache(10 * 60 * 1000)
+      q.cache(10 * 60 * 1000) unless global.testing # TODO: Get tests to somehow clear mongoose cache between tests
 
       q.exec (err, documents) =>
         return @sendDatabaseError(res, err) if err
-        documents = (@formatEntity(req, doc) for doc in documents)
-        @sendSuccess(res, documents)
+        formattedDocuments = []
+        codeNinjaOriginal = '58192d484954d56144a7062f'  # Don't allow playing as the Code Ninja hero elsewhere
+        host = req.hostname ? req.host
+        for doc in documents
+          continue if doc.get('original') + '' is codeNinjaOriginal and host isnt 'coco.code.ninja'
+          continue if doc.get('restricted') and not req.user?.isAdmin() and not (doc.get('restricted') is 'code-play' and req.features.codePlay)
+          formattedDocuments.push @formatEntity(req, doc)
+        @sendSuccess(res, formattedDocuments)
     else
       super(arguments...)
 

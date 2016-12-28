@@ -13,7 +13,7 @@ config = require '../../server_config'
 request = require 'request'
 async = require 'async'
 apple_utils = require '../lib/apple_utils'
-
+{formatDollarValue} = require '../../app/core/utils'
 
 PaymentHandler = class PaymentHandler extends Handler
   modelClass: Payment
@@ -280,7 +280,7 @@ PaymentHandler = class PaymentHandler extends Handler
     )
 
   chargeStripe: (req, res, product) ->
-    amount = parseInt product.get('amount') ? req.body.amount
+    amount = parseInt(product.get('amount') ? req.body.amount)
     return @sendError(res, 400, "Invalid amount.") if isNaN(amount)
 
     stripe.charges.create({
@@ -411,7 +411,7 @@ PaymentHandler = class PaymentHandler extends Handler
 
   sendPaymentSlackMessage: (options) ->
     try
-      message = "#{options.user?.get('emailLower')} paid #{options.payment?.get('amount')} for #{options.payment.get('description') or '???, no payment description!'}"
+      message = "#{options.user?.get('emailLower')} paid #{formatDollarValue(options.payment?.get('amount')/100)} for #{options.payment.get('description') or '???, no payment description!'}"
       slack.sendSlackMessage message, ['tower']
     catch e
       log.error "Couldn't send Slack message on payment because of error: #{e}"

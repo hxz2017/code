@@ -84,13 +84,14 @@ _.extend CampaignSchema.properties, {
   }}
 }
 
-denormalizedLevelProperties = [
+CampaignSchema.denormalizedLevelProperties = [
   'name'
   'description'
   'i18n'
   'requiresSubscription'
   'replayable'
   'type'
+  'kind'
   'slug'
   'original'
   'adventurer'
@@ -118,12 +119,14 @@ denormalizedLevelProperties = [
   'restrictedProperties'
   'recommendedHealth'
   'concepts'
+  'primaryConcepts'
   'picoCTFProblem'
   'campaign'
   'campaignIndex'
+  'scoreTypes'
 ]
-hiddenLevelProperties = ['name', 'description', 'i18n', 'replayable', 'slug', 'original', 'primerLanguage', 'shareable', 'concepts']
-for prop in denormalizedLevelProperties
+hiddenLevelProperties = ['name', 'description', 'i18n', 'replayable', 'slug', 'original', 'primerLanguage', 'shareable', 'concepts', 'scoreTypes']
+for prop in CampaignSchema.denormalizedLevelProperties
   CampaignSchema.properties.levels.additionalProperties.properties[prop] = _.cloneDeep(LevelSchema.properties[prop])
 for hiddenProp in hiddenLevelProperties
   CampaignSchema.properties.levels.additionalProperties.properties[hiddenProp].format = 'hidden'

@@ -39,6 +39,15 @@ module.exports = class HintsView extends CocoView
     @$el.toggleClass('hide', @hintsState.get('hidden'))
     super()
     @playSound 'game-menu-open'
+    @$('a').attr 'target', '_blank'
+    codeLanguage = @options.session.get('codeLanguage') or me.get('aceConfig')?.language or 'python'
+
+    oldEditor.destroy() for oldEditor in @aceEditors ? []
+    @aceEditors = []
+    aceEditors = @aceEditors
+    @$el.find('pre:has(code[class*="lang-"])').each ->
+      aceEditor = utils.initializeACE @, codeLanguage
+      aceEditors.push aceEditor
 
   getProcessedHint: ->
     language = @session.get('codeLanguage')

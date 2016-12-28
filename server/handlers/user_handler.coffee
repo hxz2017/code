@@ -110,6 +110,7 @@ UserHandler = class UserHandler extends Handler
         r = {message: 'is already used by another account', property: 'email', code: 409}
         return callback({res: r, code: 409}) if otherUser
         user.set('email', req.body.email)
+        user.set('emailVerified', false)
         callback(null, req, user)
 
     # Name setting
@@ -696,7 +697,7 @@ UserHandler = class UserHandler extends Handler
     emailHash = @buildEmailHash user
     fallback ?= 'https://codecombat.com/file/db/thang.type/52a00d55cf1818f2be00000b/portrait.png'
     fallback = "https://codecombat.com#{fallback}" unless /^http/.test fallback
-    "https://www.gravatar.com/avatar/#{emailHash}?s=#{size}&default=#{fallback}"
+    "https://secure.gravatar.com/avatar/#{emailHash}?s=#{size}&default=#{fallback}"
 
   buildEmailHash: (user) ->
     # emailHash is used by gravatar

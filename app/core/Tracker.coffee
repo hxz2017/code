@@ -68,12 +68,14 @@ module.exports = class Tracker extends CocoClass
     @explicitTraits ?= {}
     @explicitTraits[key] = value for key, value of traits
 
-    for userTrait in ['email', 'anonymous', 'dateCreated', 'name', 'testGroupNumber', 'gender', 'lastLevel', 'siteref', 'ageRange', 'schoolName', 'coursePrepaidID', 'role']
-      traits[userTrait] ?= me.get(userTrait)
+    for userTrait in ['email', 'anonymous', 'dateCreated', 'hourOfCode', 'name', 'referrer', 'testGroupNumber', 'gender', 'lastLevel', 'siteref', 'ageRange', 'schoolName', 'coursePrepaidID', 'role']
+      traits[userTrait] ?= me.get(userTrait) if me.get(userTrait)?
     if me.isTeacher()
       traits.teacher = true
+    traits.host = document.location.host
 
     console.log 'Would identify', me.id, traits if debugAnalytics
+    @trackEventInternal('Identify', {id: me.id, traits}) unless me?.isAdmin() and @isProduction
     return unless @isProduction and not me.isAdmin()
 
     # Errorception
@@ -102,12 +104,13 @@ module.exports = class Tracker extends CocoClass
     name = Backbone.history.getFragment()
     url = "/#{name}"
     console.log "Would track analytics pageview: #{url} Mixpanel=#{includeMixpanel(name)}" if debugAnalytics
-    @trackEventInternal 'Pageview', url: name unless me?.isAdmin() and @isProduction
+    @trackEventInternal 'Pageview', url: name, href: window.location.href unless me?.isAdmin() and @isProduction
     return unless @isProduction and not me.isAdmin()
 
     # Google Analytics
     # https://developers.google.com/analytics/devguides/collection/analyticsjs/pages
     ga? 'send', 'pageview', url
+    ga?('codeplay.send', 'pageview', url) if features.codePlay
 
     # Mixpanel
     mixpanel.track('page viewed', 'page name' : name, url : url) if includeMixpanel(name)
@@ -153,6 +156,7 @@ module.exports = class Tracker extends CocoClass
       analytics?.track action, {}, options
 
   trackEventInternal: (event, properties) =>
+    return unless @supermodel?
     # Skipping heavily logged actions we don't use internally
     return if event in ['Simulator Result', 'Started Level Load', 'Finished Level Load']
     # Trimming properties we don't use internally

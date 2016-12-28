@@ -37,7 +37,7 @@ module.exports = class PlayHeroesModal extends ModalView
     @confirmButtonI18N = options.confirmButtonI18N ? "common.save"
     @heroes = new CocoCollection([], {model: ThangType})
     @heroes.url = '/db/thang.type?view=heroes'
-    @heroes.setProjection ['original','name','slug','soundTriggers','featureImages','gems','heroClass','description','components','extendedName','unlockLevelName','i18n']
+    @heroes.setProjection ['original','name','slug','soundTriggers','featureImages','gems','heroClass','description','components','extendedName','unlockLevelName','i18n','poseImage']
     @heroes.comparator = 'gems'
     @listenToOnce @heroes, 'sync', @onHeroesLoaded
     @supermodel.loadCollection(@heroes, 'heroes')
@@ -156,6 +156,11 @@ module.exports = class PlayHeroesModal extends ModalView
   loadHero: (hero, heroIndex, preloading=false) ->
     createjs.Ticker.removeEventListener 'tick', stage for stage in _.values @stages
     createjs.Ticker.setFPS 30  # In case we paused it from being inactive somewhere else
+    if poseImage = hero.get 'poseImage'
+      $(".hero-item[data-hero-id='#{hero.get('original')}'] canvas").hide()
+      $(".hero-item[data-hero-id='#{hero.get('original')}'] .hero-pose-image").show().find('img').prop('src', '/file/' + poseImage)
+      @playSelectionSound hero unless preloading
+      return hero
     if stage = @stages[heroIndex]
       unless preloading
         _.defer -> createjs.Ticker.addEventListener 'tick', stage  # Deferred, otherwise it won't start updating for some reason.
@@ -189,7 +194,7 @@ module.exports = class PlayHeroesModal extends ModalView
         layer.container.scaleX = layer.container.scaleY = m
         layer.container.children[0].x = 160/m
         layer.container.children[0].y = 250/m
-        if fullHero.get('slug') in ['forest-archer', 'librarian', 'sorcerer', 'potion-master', 'necromancer']
+        if fullHero.get('slug') in ['forest-archer', 'librarian', 'sorcerer', 'potion-master', 'necromancer', 'code-ninja']
           layer.container.children[0].y -= 3
         if fullHero.get('slug') in ['librarian', 'sorcerer', 'potion-master', 'necromancer', 'goliath']
           layer.container.children[0].x -= 3
@@ -245,7 +250,7 @@ module.exports = class PlayHeroesModal extends ModalView
     affordable = @visibleHero.get('gems') <= me.gems()
     if not affordable
       @playSound 'menu-button-click'
-      @askToBuyGems button unless me.isOnFreeOnlyServer()
+      @askToBuyGems button unless features.freeOnly
     else if button.hasClass('confirm')
       @playSound 'menu-button-unlock-end'
       purchase = Purchase.makeFor(@visibleHero)

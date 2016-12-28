@@ -9,6 +9,7 @@ nockUtils = require '../nock-utils'
 User = require '../../../server/models/User'
 Payment = require '../../../server/models/Payment'
 Prepaid = require '../../../server/models/Prepaid'
+Product = require '../../../server/models/Product'
 request = require '../request'
 
 subPrice = 100
@@ -94,6 +95,9 @@ customerSubscriptionDeletedSampleEvent = {
 
 
 describe '/db/user, editing stripe property', ->
+  beforeEach utils.wrap (done) ->
+    yield utils.populateProducts()
+    done()
   afterEach nockUtils.teardownNock
 
   stripe = require('stripe')(config.stripe.secretKey)
@@ -114,7 +118,7 @@ describe '/db/user, editing stripe property', ->
       request.put {uri: userURL, json: body, headers: headers}, (err, res, body) ->
         expect(res.statusCode).toBe 403
         done()
-  
+
   it 'denies username-only users trying to subscribe', utils.wrap (done) ->
     user = yield utils.initUser({ email: undefined,  })
     yield utils.loginUser(user)
@@ -262,6 +266,9 @@ describe 'Subscriptions', ->
   webhookURL = getURL('/stripe/webhook')
   headers = {'X-Change-Plan': 'true'}
   invoicesWebHooked = {}
+  beforeEach utils.wrap (done) ->
+    yield utils.populateProducts()
+    done()
   afterEach nockUtils.teardownNock
 
   # Start helpers
@@ -1508,6 +1515,9 @@ describe 'Subscriptions', ->
 
   describe 'APIs', ->
     subscriptionURL = getURL('/db/subscription')
+    beforeEach utils.wrap (done) ->
+      yield utils.populateProducts()
+      done()
 
     it 'year_sale', (done) ->
       nockUtils.setupNock 'sub-test-35.json', (err, nockDone) ->
@@ -1539,6 +1549,33 @@ describe 'Subscriptions', ->
                   expect(payment.get('gems')).toEqual(subGems*12)
                   nockDone()
                   done()
+
+    it 'year_sale test group b', (done) ->
+      nockUtils.setupNock 'sub-test-42.json', (err, nockDone) ->
+        stripe.tokens.create {
+          card: { number: '4242424242424242', exp_month: 12, exp_year: 2020, cvc: '123' }
+        }, (err, token) ->
+          loginNewUser (user1) ->
+            expect(user1.get('stripe')?.free).toBeUndefined()
+            user1.set('testGroupNumber', 1)
+            user1.save (err, user1) ->
+              requestBody =
+                stripe:
+                  token: token.id
+                  timestamp: new Date()
+              request.put {uri: "#{subscriptionURL}/-/year_sale", json: requestBody, headers: headers }, (err, res) ->
+                expect(err).toBeNull()
+                expect(res.statusCode).toBe(200)
+                User.findById user1.id, (err, user1) ->
+                  expect(err).toBeNull()
+                  stripeInfo = user1.get('stripe')
+                  Payment.findOne purchaser: user1._id, (err, payment) ->
+                    expect(err).toBeNull()
+                    Product.findOne name: 'year_subscription_b', (err, product) ->
+                      expect(err).toBeNull()
+                      expect(product.get('amount')).toEqual(payment.get('amount'))
+                      nockDone()
+                      done()
 
     it 'year_sale when stripe.free === true', (done) ->
       nockUtils.setupNock 'sub-test-36.json', (err, nockDone) ->

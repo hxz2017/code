@@ -12,10 +12,10 @@ module.exports = class SubscribeModal extends ModalView
   closesOnClickOutside: false
   planID: 'basic'
   i18nData:
-    levelsCount: '145'
+    levelsCount: '100'
     worldsCount: '5'
-    heroesCount: '14'
-    bonusLevelsCount: '95'
+    heroesCount: '16'
+    bonusLevelsCount: '330'
 
   subscriptions:
     'stripe:received-token': 'onStripeReceivedToken'
@@ -35,7 +35,8 @@ module.exports = class SubscribeModal extends ModalView
 
   onLoaded: ->
     @basicProduct = @products.findWhere { name: 'basic_subscription' }
-    @yearProduct = @products.findWhere { name: 'year_subscription' }
+    @yearProduct = @products.findWhere { name: me.getYearSubscriptionGroup() }
+    @yearProduct ?= @products.findWhere { name: 'year_subscription' }
     if countrySpecificProduct = @products.findWhere { name: "#{me.get('country')}_basic_subscription" }
       @basicProduct = countrySpecificProduct
       @yearProduct = @products.findWhere { name: "#{me.get('country')}_year_subscription" }  # probably null
@@ -48,6 +49,8 @@ module.exports = class SubscribeModal extends ModalView
     @setupPaymentMethodsInfoPopover()
     if @basicProduct
       @$el.find('.gem-amount').html $.i18n.t('subscribe.feature4').replace('{{gems}}', @basicProduct.get('gems'))
+      if @basicProduct.get('gems') < 3500
+        @$el.find('[data-i18n="subscribe.feature6"]').parents('tr').hide()
     @playSound 'game-menu-open'
 
   setupParentButtonPopover: ->
@@ -74,7 +77,7 @@ module.exports = class SubscribeModal extends ModalView
     popoverContent += "<p>" + $.i18n.t('subscribe.parents_blurb1a') + "</p>"
     popoverContent += "<p>" + $.i18n.t('subscribe.parents_blurb2') + "</p>"
     price = (@basicProduct.get('amount') / 100).toFixed(2)
-    # TODO: Update i18next and use its own interpolation system instead
+    # TODO: Use i18next's interpolation system instead
     popoverContent = popoverContent.replace('{{price}}', price)
     popoverContent += "<p>" + $.i18n.t('subscribe.parents_blurb3') + "</p>"
     @$el.find('#parents-info').popover(

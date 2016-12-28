@@ -1,5 +1,6 @@
 Backbone.Mediator.setValidationEnabled false
 app = null
+utils = require './utils'
 
 channelSchemas =
   'auth': require 'schemas/subscriptions/auth'
@@ -23,7 +24,9 @@ definitionSchemas =
 init = ->
   return if app
   if not window.userObject._id
-    $.ajax '/auth/whoami', cache: false, success: (res) ->
+    options = { cache: false }
+    options.data = _.pick(utils.getQueryVariables(), 'preferredLanguage')
+    $.ajax('/auth/whoami', options).then (res) ->
       window.userObject = res
       init()
     return
@@ -95,7 +98,9 @@ setupConsoleLogging = ->
 
 watchForErrors = ->
   currentErrors = 0
+  oldOnError = window.onerror
   window.onerror = (msg, url, line, col, error) ->
+    oldOnError.apply window, arguments if oldOnError
     return if currentErrors >= 3
     return unless me.isAdmin() or document.location.href.search(/codecombat.com/) is -1 or document.location.href.search(/\/editor\//) isnt -1
     ++currentErrors

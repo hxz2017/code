@@ -5,8 +5,7 @@ wrap = require 'co-express'
 
 get = wrap (req, res) ->
   products = yield Product.find()
-  unless _.size(products) or config.isProduction
-    res.send(productStubs)
+  return res.send(productStubs) unless _.size(products) or config.isProduction
   res.send(products)
 
 ###
@@ -61,6 +60,13 @@ productStubs = [
   }
 
   {
+    name: 'year_subscription_b'
+    amount: 1001
+    gems: 42000
+  }
+
+
+  {
     name: 'prepaid_subscription'
     amount: 100
     gems: 3500
@@ -68,6 +74,11 @@ productStubs = [
 
   {
     name: 'course'
+    amount: 100
+  }
+
+  {
+    name: 'starter_license'
     amount: 100
   }
 

@@ -1,9 +1,11 @@
 log = require 'winston'
 Payment = require '../models/Payment'
-PaymentHandler = require '../handlers/payment_handler'
 Promise = require 'bluebird'
+config = require '../../server_config'
 
 module.exports =
+  api: require('stripe')(config.stripe.secretKey)
+  
   logError: (user, msg) ->
     log.error "Stripe Utils Error: #{user.get('slug')} (#{user._id}): '#{msg}'"
 
@@ -23,6 +25,7 @@ module.exports =
       done(err, charge)
 
   createPayment: (user, stripeCharge, extraProps, done) ->
+    PaymentHandler = require '../handlers/payment_handler' # require JIT so server models can initialize properly first
     payment = new Payment
       purchaser: user._id
       recipient: user._id
