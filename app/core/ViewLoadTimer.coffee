@@ -21,7 +21,7 @@ class ViewLoadTimer
       if not subView.supermodel.finished()
         networkPromises.push(subView.supermodel.finishLoading())
     console.log 'Network promises:', networkPromises.length if VIEW_LOAD_LOG
-
+    thatThereId = @view.id
     Promise.all(networkPromises)
     .then =>
       @networkLoad = performance.now()
@@ -50,9 +50,14 @@ class ViewLoadTimer
       console.groupEnd() if VIEW_LOAD_LOG
       return Promise.all(imagePromises)
     .then =>
-      return if @view.destroyed
       networkTime = @networkLoad - @t0
       totalTime = performance.now() - @t0 
+      console.log "Saw view load event", thatThereId, @view.id
+
+      if @view.destroyed
+        console.log "Sure did toss that thing."
+        window.bored += totalTime
+        return
       return console.warn("Unknown view at: #{document.location.href}, could not record perf.") if not @view.id
       return console.warn("Got invalid time result for view #{@view.id}: #{totalTime}, could not record perf.") if not _.isNumber(totalTime)
       m = "Loaded #{@view.id} in: #{totalTime}ms"
@@ -69,6 +74,8 @@ class ViewLoadTimer
       console.log m if VIEW_LOAD_LOG
       noty({text:m, type:'information', timeout: 1000, layout:'topCenter'}) if SHOW_NOTY
       window.tracker?.trackEvent 'View Load', _.assign({ networkTime, totalTime, viewId: @view.id, @firstLoad }, resourceInfo)
+      window.bored ?= 0
+      window.bored += totalTime
     .then =>
       console.groupEnd() if VIEW_LOAD_LOG
 
