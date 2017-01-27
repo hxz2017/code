@@ -160,7 +160,7 @@ module.exports = class SkippedContactsView extends RootView
 
 
   afterRender: ->
-    @vueComponent?.$destroy() # TODO: Don't recreate this component every time things update
+    @vueComponent?.$destroy()
     @vueComponent = new SkippedContactsComponent({
       el: @$el.find('#site-content-area')[0]
       store: @store
