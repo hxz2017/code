@@ -1,4 +1,14 @@
 .container
+  ul
+    li(v-for="attribute in possibleValues")
+      {{attribute.name}}
+      ul
+        li(v-for="value in attribute.values")
+          {{value}}
+          input(:value="weights[attribute.name][value]" type="number")
+        
   ol.trial-requests
     li(v-for="trialRequest in trialRequests")
       {{ trialRequest._id }}
+      pre
+        {{ JSON.stringify(trialRequest, null, 4) }}
