@@ -40,7 +40,7 @@ LeadScoreVueComponent = Vue.extend
   template: require('templates/admin/lead-score-view')()
   data: ->
     {}
-  computed: ->
+  computed:
     Vuex.mapState(['trialRequests'])
   created: co.wrap ->
     trialRequestIds = [ "57f3eb1abddd0e2900e8079a", "580d6b07b8ea5824004857cf", "583dceedf09fa920006a4037", "584830eae978681f00e85338", "5849b313c9b6b82a00415674", "587e36256f41252100024fd9" ]
