@@ -17,23 +17,34 @@ module.exports = class LeadScoreView extends RootView
     @store = new Vuex.Store({
       state:
         trialRequests: []
-        weights: {}
+        valueWeights: {}
+        attributeWeights: {}
         scoreAttributes: ['country', 'numStudentsTotal', 'role', 'purchaserRole']
         displayAttributes: []
       actions:
         loadTrialRequests: (context, trialRequests) ->
           context.commit('loadTrialRequests', trialRequests)
           context.commit('setInitialWeights', context.getters.possibleValues)
-      strict: not application.isProduction()
+      # strict: not application.isProduction()
       mutations:
         loadTrialRequests: (state, trialRequests) ->
           console.log {trialRequests}
           state.trialRequests = trialRequests
         setInitialWeights: (state, possibleValues) ->
           for attr in possibleValues
-            state.weights[attr.name] ?= {}
+            state.valueWeights[attr.name] ?= {}
+            state.attributeWeights[attr.name] = 1
             for value in attr.values
-              state.weights[attr.name][value] = 0
+              state.valueWeights[attr.name][value] = 0
+        updateWeight: (state, { attributeName, attributeValue, weightValue }) ->
+          return if _.isNaN(weightValue)
+          console.log "Updating weight"
+          if attributeValue
+            state.valueWeights[attributeName][attributeValue] = weightValue
+            Vue.set(state, 'valueWeights', _.assign {}, state.valueWeights)
+          else
+            state.attributeWeights[attributeName] = weightValue
+            Vue.set(state, 'attributeWeights', _.assign {}, state.attributeWeights)
       getters:
         possibleValues: (state) ->
           state.scoreAttributes.map (name) ->
@@ -42,6 +53,24 @@ module.exports = class LeadScoreView extends RootView
               values: _.uniq state.trialRequests.map (tr) ->
                 tr.properties[name]
             }
+        getLeadById: (state) -> (_id) ->
+          _.find(state.trialRequests, { _id })
+        sortedLeads: (state, getters) ->
+          sorted = _(state.trialRequests).sortBy((tr) ->
+            # console.log state.getLeadScoreById(tr._id)
+            getters.getLeadScoreById(tr._id)
+          ).reverse().value()
+          # console.log sorted
+          sorted
+        getLeadScoreById: (state, getters) -> (_id) ->
+          tr = getters.getLeadById(_id)
+          score = state.scoreAttributes.map((attrName)->
+            # console.log "Checking score subvalue: #{attrName} = #{tr.properties[attrName]}: #{state.valueWeights[attrName][tr.properties[attrName]]}"
+            # debugger if attrName is "country" and tr.properties[attrName] is "Canada"
+            state.valueWeights[attrName][tr.properties[attrName]] * state.attributeWeights[attrName]
+          ).reduce(((a,b) -> a + b), 0)
+          # console.log "Getting lead score for #{_id}: #{score}"
+          score
     })
 
   afterRender: ->
@@ -56,8 +85,13 @@ LeadScoreVueComponent = Vue.extend
   template: require('templates/admin/lead-score-view')()
   data: -> {}
   computed: _.assign {},
-    Vuex.mapState(['trialRequests', 'weights']),
-    Vuex.mapGetters(['possibleValues'])
+    Vuex.mapState(['trialRequests', 'valueWeights', 'attributeWeights', 'scoreAttributes']),
+    Vuex.mapGetters(['possibleValues', 'getLeadScoreById', 'getLeadById', 'sortedLeads'])
+  methods:
+    updateWeight: (attributeName, attributeValue, weightValue) ->
+      @$store.commit('updateWeight', { attributeName, attributeValue, weightValue: parseFloat(weightValue) })
+
+
   created: co.wrap ->
     trialRequestIds = [ "57f3eb1abddd0e2900e8079a", "580d6b07b8ea5824004857cf", "583dceedf09fa920006a4037", "584830eae978681f00e85338", "5849b313c9b6b82a00415674", "587e36256f41252100024fd9", "5644cf2324bd4d8705a31541" ]
     trialRequests = new TrialRequests(trialRequestIds.map (_id) -> new TrialRequest({ _id }))
