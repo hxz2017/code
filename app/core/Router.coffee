@@ -48,6 +48,7 @@ module.exports = class CocoRouter extends Backbone.Router
     'admin/pending-patches': go('admin/PendingPatchesView')
     'admin/codelogs': go('admin/CodeLogsView')
     'admin/skipped-contacts': go('admin/SkippedContactsView')
+    'admin/lead-scores': go('admin/LeadScoreView')
 
     'artisans': go('artisans/ArtisansView')
 
@@ -229,7 +230,7 @@ module.exports = class CocoRouter extends Backbone.Router
     @viewLoad.record()
     
   redirectHome: ->
-    homeUrl = switch 
+    homeUrl = switch
       when me.isStudent() then '/students'
       when me.isTeacher() then '/teachers'
       else '/'

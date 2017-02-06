@@ -1,0 +1,39 @@
+.container
+  ul
+    li(v-for="attribute in possibleValues")
+      {{attribute.name}}
+      input(:value="attributeWeights[attribute.name]",
+            type="number",
+            step="0.1",
+            @input="updateWeight(attribute.name, null, parseFloat($event.target.value))")
+      ul
+        li(v-for="value in attribute.values")
+          {{value + ''}}
+          input(:value="valueWeights[attribute.name][value]",
+                type="number",
+                step="0.1",
+                @input="updateWeight(attribute.name, value, parseFloat($event.target.value))")
+
+  ol.trial-requests
+    li(v-for="trialRequest in sortedLeads")
+      {{ trialRequest._id }}
+      span.m-l-3
+        | Grade:
+        {{ getLeadScoreById(trialRequest._id).toFixed(2) }}
+      ul
+        li
+          span Email: 
+          {{ trialRequest.properties.email }}
+        li
+          span Country: 
+          {{ trialRequest.properties.country }}
+        li
+          span School size: 
+          {{ trialRequest.properties.numStudentsTotal }}
+        li
+          span Primary role: 
+          {{ trialRequest.properties.role }}
+        li
+          span Purchaser role: 
+          {{ trialRequest.properties.purchaserRole }}
+          
