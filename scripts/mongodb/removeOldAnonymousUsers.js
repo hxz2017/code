@@ -18,24 +18,29 @@ const Promise = require('bluebird');
 const co = require('co');
 const User = require('../../server/models/User')
 const LevelSession = require('../../server/models/LevelSession')
+const Grid = require('gridfs-stream')
 
 console.log("Started script");
 co(function*(){
   "use strict";
   yield mongoose.connect(program.mainMongoConnUrl);
   const connection = mongoose.connection;
+  Grid.gfs = Grid(mongoose.connection.db, mongoose.mongo)
 
   console.log("Counting old users...");
-  const numOldUsers = yield User.count({
-    anonymous: true,
-    dateCreated: {
-      $lt: new Date(new Date() - 1000*60*60*24*90)
-    }
-  })
-  const batchSize = 1000;
+  // const numOldUsers = yield User.count({
+  //   anonymous: true,
+  //   dateCreated: {
+  //     $lt: new Date(new Date() - 1000*60*60*24*90)
+  //   }
+  // })
+  const numOldUsers = 18176411;
+  const batchSize = 100000;
   const numBatches = Math.ceil(numOldUsers / batchSize);
   console.log(`Found ${numOldUsers} old users to delete (${numBatches} batches of ${batchSize})`);
   
+  var totalLevelSessions = 0;
+  var totalMedia = 0;
   for(var batchNumber = 0; batchNumber < numBatches; batchNumber++) {
     const oldUsers = yield User.find({
       anonymous: true,
@@ -50,7 +55,19 @@ co(function*(){
     const levelSessions = yield LevelSession.find({
       creator: {$in: oldUserIds}
     })
-    console.log("found", levelSessions.length, "level sessions");
+    totalLevelSessions += levelSessions.length;
+    console.log(`found ${levelSessions.length} level sessions (${totalLevelSessions} total)`);
+    
+    Grid.gfs.collection('media').find({ "metadata.creator": {$in: oldUserIds} }, (err, media) => {
+      co(function*(){
+        media = yield media.toArray();
+        console.log(`found ${media.length} media chunks`);
+        totalMedia += media.length;
+        console.log(media);
+      })
+    });
+    
+    console.log(`Found ${totalMedia} media chunks so far.`);
     
     if(!program.dryRun) {
       console.log("Removing users!");
