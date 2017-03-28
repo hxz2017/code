@@ -1,7 +1,7 @@
 CocoView = require 'views/core/CocoView'
 template = require 'templates/editor/patches'
 PatchesCollection = require 'collections/PatchesCollection'
-nameLoader = require 'core/NameLoader'
+store = require 'core/store'
 PatchModal = require './PatchModal'
 
 module.exports = class PatchesView extends CocoView
@@ -29,12 +29,11 @@ module.exports = class PatchesView extends CocoView
 
   onPatchesLoaded: ->
     ids = (p.get('creator') for p in @patches.models)
-    jqxhrOptions = nameLoader.loadNames ids
-    @supermodel.addRequestResource('user_names', jqxhrOptions).load() if jqxhrOptions
+    store.dispatch('loadUserNames', ids).then => @render()
 
   getRenderData: ->
     c = super()
-    patch.userName = nameLoader.getName(patch.get('creator')) for patch in @patches.models
+    patch.userName = store.getters.getRealName(patch.get('creator')) for patch in @patches.models
     c.patches = @patches.models
     c.status
     c

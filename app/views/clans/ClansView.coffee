@@ -5,6 +5,7 @@ template = require 'templates/clans/clans'
 CocoCollection = require 'collections/CocoCollection'
 Clan = require 'models/Clan'
 SubscribeModal = require 'views/core/SubscribeModal'
+store = require 'core/store'
 
 # TODO: Waiting for async messages
 # TODO: Invalid clan name message
@@ -35,9 +36,9 @@ module.exports = class ClansView extends RootView
     @setupPrivateInfoPopover()
 
   onLoaded: ->
-    super()
     @publicClansArray = _.filter(@publicClans.models, (clan) -> clan.get('type') is 'public')
     @myClansArray = @myClans.models
+    super()
 
   loadData: ->
     sortClanList = (a, b) ->
@@ -61,16 +62,11 @@ module.exports = class ClansView extends RootView
     @myClanIDs = me.get('clans') ? []
 
   refreshNames: (clans) ->
-    clanIDs = _.filter(clans, (clan) -> clan.get('type') is 'public')
-    clanIDs = _.map(clans, (clan) -> clan.get('ownerID'))
-    options =
-      url: '/db/user/-/names'
-      method: 'POST'
-      data: {ids: clanIDs}
-      success: (models, response, options) =>
-        @idNameMap[userID] = models[userID].name for userID of models
-        @render?()
-    @supermodel.addRequestResource('user_names', options, 0).load()
+    publicClans = _.filter(clans, (clan) -> clan.get('type') is 'public')
+    ownerIds = _.map(publicClans, (clan) -> clan.get('ownerID'))
+    store.dispatch('loadUserNames', ownerIds).then =>
+      @idNameMap[ownerId] = store.getters.getUserName(ownerId) for ownerId in ownerIds
+      @render?()
 
   setupPrivateInfoPopover: ->
     popoverTitle = "<h3>" + $.i18n.t('clans.private_clans') + "</h3>"

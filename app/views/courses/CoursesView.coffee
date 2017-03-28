@@ -14,7 +14,7 @@ Classroom = require 'models/Classroom'
 Classrooms = require 'collections/Classrooms'
 LevelSession = require 'models/LevelSession'
 Levels = require 'collections/Levels'
-NameLoader = require 'core/NameLoader'
+store = require 'core/store'
 Campaign = require 'models/Campaign'
 ThangType = require 'models/ThangType'
 utils = require 'core/utils'
@@ -91,10 +91,10 @@ module.exports = class CoursesView extends RootView
     else if @classCodeQueryVar and me.isAnonymous()
       @openModalView(new CreateAccountModal())
     ownerIDs = _.map(@classrooms.models, (c) -> c.get('ownerID')) ? []
-    Promise.resolve($.ajax(NameLoader.loadNames(ownerIDs)))
+    store.dispatch('loadUserNames', ownerIDs)
     .then(=>
       @ownerNameMap = {}
-      @ownerNameMap[ownerID] = NameLoader.getName(ownerID) for ownerID in ownerIDs
+      @ownerNameMap[ownerID] = store.getters.getRealName(ownerID) for ownerID in ownerIDs
       @render?()
     )
     _.forEach _.unique(_.pluck(@classrooms.models, 'id')), (classroomID) =>

@@ -3,7 +3,8 @@ store = new Vuex.Store({
   state: {
     pageErrors: []
     localesLoaded: {}
-    features: {}
+    features: {},
+    world: {}
   }
   mutations: {
     addPageError: (state, error) -> state.pageErrors.push(error)
@@ -15,7 +16,8 @@ store = new Vuex.Store({
     updateFeatures: (state, features) -> state.features = features
   }
   modules: {
-    me: require('./modules/me')
+    me: require('./modules/me'),
+    names: require('./modules/names')
   }
 })
 

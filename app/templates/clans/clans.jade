@@ -32,6 +32,7 @@ block content
             th(data-i18n="clans.chieftain") Chieftain
             th  
         tbody
+          - console.log('length', view.publicClansArray.length)
           if view.publicClansArray.length
             each clan in view.publicClansArray
               tr

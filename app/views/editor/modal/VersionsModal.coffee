@@ -2,7 +2,7 @@ ModalView = require 'views/core/ModalView'
 template = require 'templates/editor/modal/versions-modal'
 DeltaView = require 'views/editor/DeltaView'
 PatchModal = require 'views/editor/PatchModal'
-nameLoader = require 'core/NameLoader'
+store = require 'core/store'
 CocoCollection = require 'collections/CocoCollection'
 deltasLib = require 'core/deltas'
 
@@ -40,8 +40,7 @@ module.exports = class VersionsModal extends ModalView
 
   onVersionsFetched: ->
     ids = (p.get('creator') for p in @versions.models)
-    jqxhrOptions = nameLoader.loadNames ids
-    @supermodel.addRequestResource('user_names', jqxhrOptions).load() if jqxhrOptions
+    store.dispatch('loadUserNames', ids).then => @render()
 
   onSelectionChanged: ->
     rows = @$el.find 'input.select:checked'
@@ -66,5 +65,5 @@ module.exports = class VersionsModal extends ModalView
     if @versions
       context.dataList = (m.attributes for m in @versions.models)
       for version in context.dataList
-        version.creator = nameLoader.getName(version.creator)
+        version.creator = store.getters.getRealName(version.creator)
     context

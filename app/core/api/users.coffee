@@ -5,6 +5,18 @@ module.exports = {
   
   getByHandle: (handle, options) ->
     fetchJson("/db/user/#{handle}", options)
+    
+  getNames: (ids, options) ->
+    return fetchJson('/db/user/x/names', _.assign({}, options, {
+      method: 'POST',
+      json: { ids }
+    }))
+
+  put: (user, options={}) ->
+    fetchJson(@url(user._id), _.assign({}, options, {
+      method: 'PUT'
+      json: user
+    }))
 
   signupWithPassword: ({userId, name, email, password}, options={}) ->
     fetchJson(@url(userId, 'signup-with-password'), _.assign({}, options, {
@@ -31,10 +43,4 @@ module.exports = {
     .then ->
       window.tracker?.trackEvent 'Google Login', category: "Signup", label: 'GPlus'
       window.tracker?.trackEvent 'Finished Signup', category: "Signup", label: 'GPlus'
-      
-  put: (user, options={}) ->
-    fetchJson(@url(user._id), _.assign({}, options, {
-      method: 'PUT'
-      json: user
-    }))
 }

@@ -73,7 +73,7 @@ module.exports = class PendingPatchesView extends RootView
         @nameMap[creatorID] = name
       @render()
 
-    userNamesRequest = @supermodel.addRequestResource 'user_names', {
+    userNamesRequest = @supermodel.addRequestResource 'user_names', { #
       url: '/db/user/-/names'
       data: {ids: ids}
       method: 'POST'
