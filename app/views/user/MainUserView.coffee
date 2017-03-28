@@ -5,6 +5,7 @@ template = require 'templates/user/main-user-view'
 {me} = require 'core/auth'
 Clan = require 'models/Clan'
 EarnedAchievementCollection = require 'collections/EarnedAchievementCollection'
+store = require 'core/store'
 
 class LevelSessionsCollection extends CocoCollection
   model: LevelSession
@@ -59,14 +60,10 @@ module.exports = class MainUserView extends UserView
     return unless clans?
     @idNameMap = []
     @clanModels = clans
-    options =
-      url: '/db/user/-/names'
-      method: 'POST'
-      data: {ids: _.map(clans, (clan) -> clan.get('ownerID'))}
-      success: (models, response, options) =>
-        @idNameMap[userID] = models[userID].name for userID of models
-        @render?()
-    @supermodel.addRequestResource('user_names', options, 0).load()
+    ownerIds = _.map(clans, (clan) -> clan.get('ownerID'))
+    store.dispatch('loadUsers', ownerIds).then =>
+      @idNameMap[ownerId] = store.getters.getUserName(ownerId) for ownerId in ownerIds
+      @render?()
 
   onSyncLevelSessions: (levelSessions) ->
     return unless levelSessions?
