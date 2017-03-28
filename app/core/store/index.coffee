@@ -17,7 +17,7 @@ store = new Vuex.Store({
   }
   modules: {
     me: require('./modules/me'),
-    names: require('./modules/names')
+    localDb: require('./modules/localDb')
   }
 })
 

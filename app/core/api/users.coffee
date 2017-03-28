@@ -6,7 +6,7 @@ module.exports = {
   getByHandle: (handle, options) ->
     fetchJson("/db/user/#{handle}", options)
     
-  getNames: (ids, options) ->
+  getByIds: (ids, options) ->
     return fetchJson('/db/user/x/names', _.assign({}, options, {
       method: 'POST',
       json: { ids }

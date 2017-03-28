@@ -64,7 +64,7 @@ module.exports = class ClansView extends RootView
   refreshNames: (clans) ->
     publicClans = _.filter(clans, (clan) -> clan.get('type') is 'public')
     ownerIds = _.map(publicClans, (clan) -> clan.get('ownerID'))
-    store.dispatch('loadUserNames', ownerIds).then =>
+    store.dispatch('loadUsers', ownerIds).then =>
       @idNameMap[ownerId] = store.getters.getUserName(ownerId) for ownerId in ownerIds
       @render?()
 

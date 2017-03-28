@@ -29,7 +29,7 @@ module.exports = class PatchesView extends CocoView
 
   onPatchesLoaded: ->
     ids = (p.get('creator') for p in @patches.models)
-    store.dispatch('loadUserNames', ids).then => @render()
+    store.dispatch('loadUsers', ids).then => @render()
 
   getRenderData: ->
     c = super()

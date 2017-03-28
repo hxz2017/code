@@ -40,7 +40,7 @@ module.exports = class VersionsModal extends ModalView
 
   onVersionsFetched: ->
     ids = (p.get('creator') for p in @versions.models)
-    store.dispatch('loadUserNames', ids).then => @render()
+    store.dispatch('loadUsers', ids).then => @render()
 
   onSelectionChanged: ->
     rows = @$el.find 'input.select:checked'

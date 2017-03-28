@@ -91,7 +91,7 @@ module.exports = class CoursesView extends RootView
     else if @classCodeQueryVar and me.isAnonymous()
       @openModalView(new CreateAccountModal())
     ownerIDs = _.map(@classrooms.models, (c) -> c.get('ownerID')) ? []
-    store.dispatch('loadUserNames', ownerIDs)
+    store.dispatch('loadUsers', ownerIDs)
     .then(=>
       @ownerNameMap = {}
       @ownerNameMap[ownerID] = store.getters.getRealName(ownerID) for ownerID in ownerIDs

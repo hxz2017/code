@@ -14,14 +14,14 @@ module.exports = {
       state.users[id]?.name or ''
   }
   mutations: {
-    addUserNames: (state, newNames) ->
-      state.users = _.extend {}, state.users, newNames
+    addUsers: (state, newUsers) ->
+      state.users = _.extend {}, state.users, newUsers
 
   }
   actions: {
-    loadUserNames: ({state, commit}, ids) ->
+    loadUsers: ({state, commit}, ids) ->
       missingIds = _.reject(ids, (id) -> state.users[id]?)
       return unless missingIds.length > 0
-      api.users.getNames(missingIds).then((newNames) => commit('addUserNames', newNames))      
+      api.users.getByIds(missingIds).then((newUsers) => commit('addUsers', newUsers))      
   }
 }
