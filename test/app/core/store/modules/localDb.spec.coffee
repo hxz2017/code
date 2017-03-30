@@ -67,3 +67,19 @@ describe 'localDb store module', ->
         expect(api.users.getByIds.calls.count()).toBe(1)
         yield store.dispatch('loadUsers', ['a', 'c'])
         expect(api.users.getByIds.calls.count()).toBe(1)
+
+    describe 'loadLevelSystemVersion', ->
+      it 'fetches system by version, which can be retrieved through getter "getLevelSystemVersion"', wrapJasmine ->
+        system = {
+          _id: 'b'
+          name: 'Physics',
+          original: 'a',
+          version: { major: 0, minor: 1, isLatestMajor: true, isLatestMinor: true }
+        }
+        spyOn(api.levelSystems, 'getVersion').and.returnValue(Promise.resolve(system))
+        store = new Vuex.Store({ modules: { localDb: _.cloneDeep(localDb) } })
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a' })
+        expect(store.getters.getLevelSystemVersion('a')).toDeepEqual(system)
+        expect(store.getters.getLevelSystemVersion('a', 0)).toDeepEqual(system)
+        expect(store.getters.getLevelSystemVersion('a', 1)).toBeNull()
+        
