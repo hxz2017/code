@@ -55,6 +55,8 @@ module.exports = {
     editLevelSystem: (state, levelSystemUpdates) ->
       unless state.levelSystems[levelSystemUpdates._id]
         throw new Error('System being edited is not loaded')
+      if _.isArray(state.levelSystems.projected[levelSystemUpdates._id])
+        throw new Error('System being edited is not fully loaded')
         
       if not state.levelSystems.edits[levelSystemUpdates._id]
         edits = _.clone(state.levelSystems.edits)
@@ -67,8 +69,10 @@ module.exports = {
       
     recordLevelSystemProject: (state, { id, project }) ->
       existingProject = state.levelSystems.projected[id]
-      if existingProject and project isnt false
-        project = _.uniq(existingProject.concat(project))
+      if project isnt false
+        if existingProject
+          project = _.uniq(existingProject.concat(project))
+        project = _.uniq(project.concat(['original', 'version'])) # need these for addLevelSystem to work, _id always included
       newProjected = _.assign({}, state.levelSystems.projected)
       newProjected[id] = project
       state.levelSystems.projected = newProjected

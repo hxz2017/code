@@ -50,6 +50,19 @@ describe 'localDb store module', ->
         expect(store.getters.getLevelSystem('a').name).toBe('New')
         expect(store.state.localDb.levelSystems['a'].name).toBe('Original')
         
+      it 'blocks editing systems which are only partially loaded', wrapJasmine ->
+        system = {
+          _id: 'a'
+          original: 'a',
+          version: { major: 0, minor: 0, isLatestMajor: true, isLatestMinor: true }
+        }
+        spyOn(api.levelSystems, 'getVersion').and.returnValue(Promise.resolve(system))
+        store = new Vuex.Store({ modules: { localDb: _.cloneDeep(localDb) } })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(0)
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a', project: ['version'] })
+        f = -> store.commit('editLevelSystem', { _id: 'a', description })
+        expect(f).toThrow()
+        
   describe 'actions', ->
     describe 'loadUsers', ->
       it 'takes a list of ids, then loads them from the server and into the state', wrapJasmine ->
