@@ -92,9 +92,35 @@ describe 'localDb store module', ->
         spyOn(api.levelSystems, 'getVersion').and.returnValue(Promise.resolve(system))
         store = new Vuex.Store({ modules: { localDb: _.cloneDeep(localDb) } })
         yield store.dispatch('loadLevelSystemVersion', { originalId: 'a' })
-        expect(store.getters.getLevelSystemVersion('a')).toDeepEqual(system)
-        expect(store.getters.getLevelSystemVersion('a', 0)).toDeepEqual(system)
-        expect(store.getters.getLevelSystemVersion('a', 1)).toBeNull()
+        expect(store.getters.getLevelSystemVersion({originalId: 'a'})).toDeepEqual(system)
+        expect(store.getters.getLevelSystemVersion({originalId: 'a', majorVersion: 0})).toDeepEqual(system)
+        expect(store.getters.getLevelSystemVersion({originalId: 'a', majorVersion: 1})).toBeNull()
+        
+      it 'accepts "project" parameter, and loads only when more info is needed', wrapJasmine ->
+        system = {
+          _id: 'a'
+          name: 'Astral Physics',
+          description: 'Lots of strings everywhere',
+          original: 'a',
+          version: { major: 0, minor: 0, isLatestMajor: true, isLatestMinor: true }
+        }
+        spyOn(api.levelSystems, 'getVersion').and.returnValue(Promise.resolve(system))
+        store = new Vuex.Store({ modules: { localDb: _.cloneDeep(localDb) } })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(0)
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a', project: ['description'] })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(1)
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a', project: ['description'] })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(1)
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a', project: ['name'] })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(2)
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a', project: ['name', 'description'] })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(2)
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a' })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(3)
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a' })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(3)
+        yield store.dispatch('loadLevelSystemVersion', { originalId: 'a', project: ['name'] })
+        expect(api.levelSystems.getVersion.calls.count()).toBe(3)
         
     describe 'saveLevelSystem', ->
       it 'takes changes to the level system and saves them as a new version to the server', wrapJasmine ->
@@ -112,8 +138,8 @@ describe 'localDb store module', ->
         expect(store.getters.editedSystems).toDeepEqual(['b'])
         returnedSystem = _.assign({}, newSystem, { _id: 'c', version: { major: 0, minor: 2, isLatestMajor: true, isLatestMinor: true }})
         spyOn(api.levelSystems, 'postNewVersion').and.returnValue(Promise.resolve(returnedSystem))
-        expect(store.getters.getLevelSystemVersion('a')._id).toBe('b')
+        expect(store.getters.getLevelSystemVersion({originalId: 'a'})._id).toBe('b')
         yield store.dispatch('saveLevelSystem', { id: 'b', commitMessage: 'Updated physics' })
         expect(store.getters.editedSystems).toDeepEqual([])
         expect(store.state.localDb.levelSystems['c']).toDeepEqual(returnedSystem)
-        expect(store.getters.getLevelSystemVersion('a')._id).toBe('c')
+        expect(store.getters.getLevelSystemVersion({originalId: 'a'})._id).toBe('c')

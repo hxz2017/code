@@ -6,9 +6,13 @@ module.exports = {
   state: {
     users: {},
     levelSystems: {
-      edits: {}
+      # id -> levelSystem as received from the server
+      # link -> id for things like pointing to the latest version of a given original
+      edits: {} # id -> edited levelSystem
+      projected: {} # id -> array of projected properties or false if all loaded
     }
   }
+  
   getters: {
     getRealName: (state) -> (id) ->
       if state.users[id]?.firstName and state.users[id]?.lastName
@@ -18,17 +22,21 @@ module.exports = {
     getUserName: (state) -> (id) ->
       state.users[id]?.name or ''
       
-    getLevelSystemVersion: (state, getters) -> (originalId, majorVersion) ->
-      link = if majorVersion? then "#{originalId}.#{majorVersion}.latest" else "#{originalId}.latest"
+    getLevelSystemVersion: (state, getters) -> ({ originalId, majorVersion, minorVersion }) ->
+      link = switch
+        when originalId and majorVersion and minorVersion then "#{originalId}.#{majorVersion}.#{minorVersion}"
+        when originalId and majorVersion then "#{originalId}.#{majorVersion}.latest"
+        else "#{originalId}.latest"
       id = state.levelSystems[link]
       return getters.getLevelSystem(id)
       
     editedSystems: (state) -> _.keys(state.levelSystems.edits)
     
     getLevelSystem: (state) -> (id) ->
-      state.levelSystems.edits?[id] or state.levelSystems[id] or null 
+      state.levelSystems.edits?[id] or state.levelSystems[id] or null
         
   }
+  
   mutations: {
     addUsers: (state, newUsers) ->
       state.users = _.extend {}, state.users, newUsers
@@ -39,6 +47,7 @@ module.exports = {
         links.push "#{levelSystem.original}.latest"
       if levelSystem.version.isLatestMinor
         links.push "#{levelSystem.original}.#{levelSystem.version.major}.latest"
+      links.push "#{levelSystem.original}.#{levelSystem.version.major}.#{levelSystem.version.minor}"
       state.levelSystems[levelSystem._id] = levelSystem
       for link in links
         state.levelSystems[link] = levelSystem._id
@@ -56,9 +65,18 @@ module.exports = {
       _.assign(editedLevelSystem, levelSystemUpdates)
       state.levelSystems.edits[levelSystemUpdates._id] = editedLevelSystem
       
+    recordLevelSystemProject: (state, { id, project }) ->
+      existingProject = state.levelSystems.projected[id]
+      if existingProject and project isnt false
+        project = _.uniq(existingProject.concat(project))
+      newProjected = _.assign({}, state.levelSystems.projected)
+      newProjected[id] = project
+      state.levelSystems.projected = newProjected
+      
     clearLevelSystemEdits: (state, id) ->
       state.levelSystems.edits = _.without(state.levelSystems.edits, id)
   }
+  
   actions: {
     loadUsers: ({ state, commit }, ids) ->
       missingIds = _.reject(ids, (id) -> state.users[id]?)
@@ -66,9 +84,21 @@ module.exports = {
       api.users.getByIds(missingIds)
       .then((newUsers) => commit('addUsers', newUsers))
 
-    loadLevelSystemVersion: ({ state, commit }, { originalId, majorVersion, minorVersion }) ->
-      api.levelSystems.getVersion({originalId, majorVersion, minorVersion})
-      .then((newSystem) => commit('addLevelSystem', newSystem))
+    loadLevelSystemVersion: ({ state, commit, getters }, { originalId, majorVersion, minorVersion, project }) ->
+      project ?= false
+      levelSystem = getters.getLevelSystemVersion({ originalId, majorVersion, minorVersion })
+      if levelSystem
+        currentProject = state.levelSystems.projected[levelSystem._id]
+        if currentProject is false or (_.isArray(project) and _.difference(project, currentProject).length is 0)
+          return false
+      options = {}
+      if project
+        options.json = project.join(',')
+      api.levelSystems.getVersion({originalId, majorVersion, minorVersion}, options)
+      .then((newSystem) =>
+        commit('addLevelSystem', newSystem)
+        commit('recordLevelSystemProject', { id: newSystem._id, project })
+      )
 
     saveLevelSystem: ({ state, commit }, { id, commitMessage }) ->
       levelSystem = state.levelSystems.edits[id]
@@ -90,6 +120,5 @@ module.exports = {
   * Compile as needed (LevelSystem.coffee)
   * Save to local storage
   * Get dependencies (LevelSystem.coffee)
-  * Get only certain properties, unless they were all already downloaded
   * Add new system, be able to save it
 ###
