@@ -8,4 +8,10 @@ module.exports = {
       else ''
     url = "/db/level.system/#{originalId}/version#{versionString}"
     fetchJson(url, options)
+
+  postNewVersion: (levelSystem, options) ->
+    url = "/db/level.system/#{levelSystem.original}/new-version"
+    fetchJson(url, _.assign({}, options, {
+      method: 'POST'
+    }))
 }

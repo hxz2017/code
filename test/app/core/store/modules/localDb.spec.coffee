@@ -37,6 +37,19 @@ describe 'localDb store module', ->
         )
         store.commit('addUsers', {'a': {name:'a'}})
         
+    describe 'editLevelSystem', ->
+      it 'modifies the given system, and saves an unedited copy', ->
+        store = new Vuex.Store({ modules: { localDb: _.cloneDeep(localDb) } })
+        system = { _id: 'a', name: 'Original', version: {} }
+        store.commit('addLevelSystem', system)
+        description = 'Some description'
+        store.commit('editLevelSystem', { _id: 'a', description })
+        expect(store.getters.getLevelSystem('a').description).toBe(description)
+        expect(store.state.localDb.levelSystems['a'].description).toBeUndefined()
+        store.commit('editLevelSystem', { _id: 'a', name: 'New' })
+        expect(store.getters.getLevelSystem('a').name).toBe('New')
+        expect(store.state.localDb.levelSystems['a'].name).toBe('Original')
+        
   describe 'actions', ->
     describe 'loadUsers', ->
       it 'takes a list of ids, then loads them from the server and into the state', wrapJasmine ->
@@ -83,3 +96,24 @@ describe 'localDb store module', ->
         expect(store.getters.getLevelSystemVersion('a', 0)).toDeepEqual(system)
         expect(store.getters.getLevelSystemVersion('a', 1)).toBeNull()
         
+    describe 'saveLevelSystem', ->
+      it 'takes changes to the level system and saves them as a new version to the server', wrapJasmine ->
+        system = {
+          _id: 'b'
+          name: 'Physics',
+          original: 'a',
+          version: { major: 0, minor: 1, isLatestMajor: true, isLatestMinor: true }
+        }
+        store = new Vuex.Store({ modules: { localDb: _.cloneDeep(localDb) } })
+        store.commit('addLevelSystem', system)
+        newSystem = _.assign({}, system, {description: 'New and improved!', name: 'Super Physics'})
+        expect(store.getters.editedSystems).toDeepEqual([])
+        store.commit('editLevelSystem', newSystem)
+        expect(store.getters.editedSystems).toDeepEqual(['b'])
+        returnedSystem = _.assign({}, newSystem, { _id: 'c', version: { major: 0, minor: 2, isLatestMajor: true, isLatestMinor: true }})
+        spyOn(api.levelSystems, 'postNewVersion').and.returnValue(Promise.resolve(returnedSystem))
+        expect(store.getters.getLevelSystemVersion('a')._id).toBe('b')
+        yield store.dispatch('saveLevelSystem', { id: 'b', commitMessage: 'Updated physics' })
+        expect(store.getters.editedSystems).toDeepEqual([])
+        expect(store.state.localDb.levelSystems['c']).toDeepEqual(returnedSystem)
+        expect(store.getters.getLevelSystemVersion('a')._id).toBe('c')
